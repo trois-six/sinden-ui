@@ -1,7 +1,10 @@
 # sinden-driver udev rule: FALLBACK copy (see sinden-driver.service).
 # Gives the group `sinden` (the service's user) the Sinden light gun's
-# serial port and camera. The USB identifiers are the driver's to confirm.
-SUBSYSTEMS=="usb", ATTRS{idVendor}=="16c0", ATTRS{idProduct}=="0f01|0f02|0f38|0f39", GOTO="sinden_match"
+# serial port and camera.
+# Guns: vendors 16c0 and 16d0, products 0f01, 0f02, 0f38, 0f39.
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="16c0|16d0", ATTRS{idProduct}=="0f01|0f02|0f38|0f39", GOTO="sinden_match"
+# Cameras: 16d0:1097 and 16d0:1098.
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="16d0", ATTRS{idProduct}=="1097|1098", GOTO="sinden_match"
 GOTO="sinden_end"
 
 LABEL="sinden_match"
