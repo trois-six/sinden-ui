@@ -1,0 +1,63 @@
+#!/bin/sh
+# Render the icons the UI and the installers need from assets/*.svg.
+#
+#   assets/icon.svg           application icon (coloured rounded square)
+#   assets/icon-template.svg  macOS menu bar template (black + alpha)
+#   assets/icon-tray.svg      Linux tray (white sight, dark outline)
+#
+# Outputs (committed, so that builds need no image tool):
+#   ui/src-tauri/icons/                       Tauri set (PNG, .ico, .icns) by `tauri icon`
+#   ui/src-tauri/icons/tray.png               Linux tray
+#   ui/src-tauri/icons/tray-template.png      macOS menu bar (22 pt @2x)
+#   packaging/linux/icons/hicolor/...         freedesktop icon theme sizes + scalable
+#
+# Renderer: rsvg-convert, inkscape or ImageMagick (`magick`), the first found.
+# `tauri icon` comes from ui/node_modules (run `npm ci` in ui/ first).
+set -eu
+
+root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
+cd "$root"
+
+work=target/icons
+mkdir -p "$work"
+
+if command -v rsvg-convert >/dev/null 2>&1; then
+	render() { rsvg-convert -w "$2" -h "$2" -o "$3" "$1"; }
+elif command -v inkscape >/dev/null 2>&1; then
+	render() { inkscape "$1" --export-type=png --export-filename="$3" -w "$2" -h "$2" >/dev/null 2>&1; }
+elif command -v magick >/dev/null 2>&1; then
+	render() { magick -background none -density 384 "$1" -resize "$2x$2" "$3"; }
+else
+	echo "make-icons: install rsvg-convert, inkscape or ImageMagick" >&2
+	exit 1
+fi
+
+# Freedesktop hicolor theme (Linux packages).
+hicolor=packaging/linux/icons/hicolor
+for size in 16 22 24 32 48 64 128 256 512; do
+	dir="$hicolor/${size}x${size}/apps"
+	mkdir -p "$dir"
+	render assets/icon.svg "$size" "$dir/sinden-driver-ui.png"
+done
+mkdir -p "$hicolor/scalable/apps"
+cp assets/icon.svg "$hicolor/scalable/apps/sinden-driver-ui.svg"
+
+# Tray icons.
+icons=ui/src-tauri/icons
+mkdir -p "$icons"
+render assets/icon-tray.svg 64 "$icons/tray.png"
+render assets/icon-template.svg 44 "$icons/tray-template.png"
+
+# Tauri's set (window icon, .ico for Windows, .icns for macOS).
+render assets/icon.svg 1024 "$work/icon-1024.png"
+tauri=ui/node_modules/.bin/tauri
+if [ -x "$tauri" ]; then
+	"$tauri" icon "$work/icon-1024.png" -o "$icons"
+	# Mobile and Windows Store outputs are not used.
+	rm -rf "$icons/android" "$icons/ios" "$icons"/Square*Logo.png "$icons/StoreLogo.png"
+else
+	echo "make-icons: $tauri not found (run 'npm ci' in ui/); Tauri icon set not regenerated" >&2
+	exit 1
+fi
+
+echo "make-icons: done"

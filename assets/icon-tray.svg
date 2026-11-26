@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- sinden-ui monochrome tray icon for Linux panels: white sight with a -->
+  <!-- dark outline, readable on light and dark panels. Original artwork, MIT. -->
+  <g fill="none" stroke-linecap="round">
+    <g stroke="#1e1e1e">
+      <circle cx="256" cy="256" r="156" stroke-width="88"/>
+      <path d="M256 44V136M256 376V468M44 256H136M376 256H468" stroke-width="88"/>
+    </g>
+    <g stroke="#ffffff">
+      <circle cx="256" cy="256" r="156" stroke-width="48"/>
+      <path d="M256 44V136M256 376V468M44 256H136M376 256H468" stroke-width="48"/>
+    </g>
+  </g>
+  <circle cx="256" cy="256" r="58" fill="#1e1e1e"/>
+  <circle cx="256" cy="256" r="38" fill="#ffffff"/>
+</svg>
