@@ -52,7 +52,7 @@ repository's MIT license: see [NOTICE](NOTICE).
 | `scripts/` | `fetch-driver`, the package build scripts, `make-icons` |
 | `assets/` | the application icon (SVG sources) |
 | `packaging/common/` | the default configuration file |
-| `packaging/linux/` | systemd unit, udev rule, sysusers.d entry, nfpm configs (deb, rpm) |
+| `packaging/linux/` | nfpm configs (deb, rpm), maintainer scripts, fallback service files, desktop entry, icons |
 | `packaging/aur/` | Arch Linux PKGBUILDs |
 | `packaging/nix/` | Nix package and NixOS module (exposed by `flake.nix`) |
 | `packaging/windows/` | Inno Setup installer |
@@ -70,7 +70,10 @@ scripts/fetch-driver --target x86_64-unknown-linux-musl
 scripts/fetch-driver --stub                # placeholder binaries, see below
 ```
 
-The binaries land in `dist/driver/<target>/sinden-driver[.exe]`.
+The binaries land in `dist/driver/<target>/sinden-driver[.exe]`. The
+packages use the generic targets; extra entries of the lock (such as the
+MiSTer-tuned `armv7-unknown-linux-musleabihf-cortex-a9`) are ignored by
+the packaging.
 
 ### The UI
 
@@ -90,7 +93,10 @@ scripts/build-linux-packages               # sinden-driver for every Linux targe
 scripts/build-linux-packages --ui target/release/sinden-driver-ui
 ```
 
-Packages land in `dist/packages/`. The script uses
+Packages land in `dist/packages/`. The systemd unit, udev rule,
+sysusers.d and tmpfiles.d entries come from the driver itself
+(`sinden-driver service files`, run with the build host's binary); stub
+builds use the fallbacks of `packaging/linux/files/`. The script uses
 [nfpm](https://nfpm.goreleaser.com/); if it is not on the `PATH` it is
 installed with `go install` into `.tools/` (pinned version).
 
