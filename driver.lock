@@ -1,12 +1,12 @@
 {
-  "version": "0.2.3",
-  "tag": "driver-v0.2.3",
+  "version": "0.3.0",
+  "tag": "driver-v0.3.0",
   "assets": {
-    "x86_64-unknown-linux-musl": { "file": "sinden-driver-0.2.3-x86_64-unknown-linux-musl", "sha256": "96e2198b8b239ab57752fcde36b74e765ed4332d6b40b324982ec0fd664508fa" },
-    "aarch64-unknown-linux-musl": { "file": "sinden-driver-0.2.3-aarch64-unknown-linux-musl", "sha256": "ecb2ab92356ef1cd185d21d54669ab6fcecce430af7b67bc78f41e35f1d9fd40" },
-    "armv7-unknown-linux-musleabihf": { "file": "sinden-driver-0.2.3-armv7-unknown-linux-musleabihf", "sha256": "bb4a897f7ca20c01aa7d129ea3c1537c02420e4de58259aed26abb9f68da7ed1" },
-    "armv7-unknown-linux-musleabihf-cortex-a9": { "file": "sinden-driver-0.2.3-armv7-unknown-linux-musleabihf-cortex-a9", "sha256": "c5958aa92c861adbb551906c62cfd393df873bf721bdc9f2c912a2434b05a3d3" },
-    "x86_64-pc-windows-msvc": { "file": "sinden-driver-0.2.3-x86_64-pc-windows-msvc.exe", "sha256": "098b8aee45310332c1d9bafa234afca64b5c8d96aff630ca45cd18c076955ffd" },
-    "universal-apple-darwin": { "file": "sinden-driver-0.2.3-universal-apple-darwin", "sha256": "fa7db3fd6d4e5a9ec2d7643172f3f7355917ac8e931f631ad6b41554cf12415d" }
+    "x86_64-unknown-linux-musl": { "file": "sinden-driver-0.3.0-x86_64-unknown-linux-musl", "sha256": "4389546db801a728829c69a0014665063a96efe71dfe7e84d73c033c71a1d142" },
+    "aarch64-unknown-linux-musl": { "file": "sinden-driver-0.3.0-aarch64-unknown-linux-musl", "sha256": "d9de00a48fadc3ae3d4753dd46aa965cfbddae3f0f9b58dbbb695eaf7a3f0fc4" },
+    "armv7-unknown-linux-musleabihf": { "file": "sinden-driver-0.3.0-armv7-unknown-linux-musleabihf", "sha256": "69aeaec8a30b5c166e69c4898ab4c452f35aa0d237ddb1ddda5a709a0207f035" },
+    "armv7-unknown-linux-musleabihf-cortex-a9": { "file": "sinden-driver-0.3.0-armv7-unknown-linux-musleabihf-cortex-a9", "sha256": "6585564548a82129b0768caf57f28e870c4ba54f82a381fb422f4da70bddb184" },
+    "x86_64-pc-windows-msvc": { "file": "sinden-driver-0.3.0-x86_64-pc-windows-msvc.exe", "sha256": "7fb1695acf9055a1a92d82ffe261d44b05583b5a3a16b77b0f21d55a0ec34350" },
+    "universal-apple-darwin": { "file": "sinden-driver-0.3.0-universal-apple-darwin", "sha256": "786cf71348f3fefc99024ad564e0d0c062568e1df337b929c4666dca164910e0" }
   }
 }
