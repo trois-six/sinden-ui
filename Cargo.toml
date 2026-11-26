@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/sinden-control"]
+members = ["crates/sinden-control", "ui/src-tauri"]
 
 [workspace.package]
 edition = "2024"

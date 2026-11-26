@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- sinden-ui application icon: original artwork, MIT (see LICENSE). -->
+  <!-- A light-gun sight on a coloured rounded square. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff7a3d"/>
+      <stop offset="1" stop-color="#c81d5a"/>
+    </linearGradient>
+  </defs>
+  <rect x="16" y="16" width="480" height="480" rx="112" fill="url(#bg)"/>
+  <rect x="16" y="16" width="480" height="480" rx="112" fill="none" stroke="#7a0f37" stroke-opacity="0.35" stroke-width="8"/>
+  <g fill="none" stroke="#ffffff" stroke-linecap="round">
+    <circle cx="256" cy="256" r="128" stroke-width="40"/>
+    <path d="M256 84V176M256 336V428M84 256H176M336 256H428" stroke-width="40"/>
+  </g>
+  <circle cx="256" cy="256" r="30" fill="#ffffff"/>
+</svg>
