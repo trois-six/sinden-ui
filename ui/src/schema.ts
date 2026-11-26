@@ -99,6 +99,7 @@ export const PLAYER_SECTIONS: Section[] = [
         help: "help.ResourceMode",
       },
       bool("Smooth", "field.Smooth", "0", "help.Smooth"),
+      num("AimedAwayDelay", "field.AimedAwayDelay", "5", { min: 0, step: 0.5, help: "help.AimedAwayDelay" }),
       bool("OffscreenReload", "field.OffscreenReload", "0"),
     ],
   },
