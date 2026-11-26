@@ -51,6 +51,8 @@ pub fn text(lang: Lang, text: Text) -> &'static str {
 
 pub fn state_name(lang: Lang, state: GunState) -> &'static str {
     match (lang, state) {
+        (Lang::En, GunState::Starting) => "starting",
+        (Lang::Fr, GunState::Starting) => "démarrage",
         (Lang::En, GunState::Aiming) => "aiming",
         (Lang::Fr, GunState::Aiming) => "vise l'écran",
         (Lang::En, GunState::AimedAway) => "aimed away",

@@ -38,9 +38,9 @@ fn main() {
     .expect("cannot bind the socket");
     eprintln!("fake driver listening on {path}");
     let states = [
-        GunState::Aiming,
         GunState::AimedAway,
         GunState::Calibrating,
+        GunState::Starting,
         GunState::Aiming,
     ];
     for state in states.iter().cycle() {

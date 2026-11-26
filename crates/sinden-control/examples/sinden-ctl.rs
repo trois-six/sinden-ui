@@ -59,7 +59,9 @@ fn run(endpoint: &Endpoint, args: &[String]) -> Result<bool> {
             Client::connect(endpoint)?.set_config(&values)?;
         }
         "subscribe" => {
-            for event in Client::connect_with_timeout(endpoint, None)?.subscribe()? {
+            let (status, events) = Client::connect_with_timeout(endpoint, None)?.subscribe()?;
+            print(&status);
+            for event in events {
                 print(&event?);
             }
         }

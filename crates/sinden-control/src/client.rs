@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::BTreeMap;
 use std::fmt;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::time::Duration;
@@ -97,31 +97,18 @@ impl Client {
         self.call("set_config", &json!({ "values": values }))
     }
 
-    /// `subscribe`: turns this connection into a stream of events.
+    /// `subscribe`: returns the current status and turns this connection
+    /// into a stream of events. Other requests need another connection.
     ///
-    /// The driver may acknowledge the request with a response (`{"id": n,
-    /// "result": ...}`) before the events, or send events straight away;
-    /// both are accepted. An error response is returned as an error.
-    pub fn subscribe(mut self) -> Result<Subscription> {
-        let id = self.send("subscribe", &json!({}))?;
-        let mut pending = VecDeque::new();
-        let message = read_message(&mut self.reader)?;
-        match message.get("id") {
-            Some(value) if value.as_u64() == Some(id) => {
-                decode_response::<Value>(message)?;
-            }
-            None | Some(Value::Null) => pending.push_back(decode_event(message)?),
-            Some(other) => {
-                return Err(Error::Protocol(format!(
-                    "expected the response to subscribe ({id}), got id {other}"
-                )));
-            }
-        }
-        Ok(Subscription {
+    /// Events received before the response are dropped: the status
+    /// supersedes them. A `null` result counts as no gun.
+    pub fn subscribe(mut self) -> Result<(Status, Subscription)> {
+        let status: Option<Status> = self.call("subscribe", &json!({}))?;
+        let subscription = Subscription {
             reader: self.reader,
-            pending,
             _writer: self.writer,
-        })
+        };
+        Ok((status.unwrap_or_default(), subscription))
     }
 
     fn send(&mut self, method: &str, params: &Value) -> Result<u64> {
@@ -139,25 +126,19 @@ impl Client {
 /// The events of a `subscribe` connection; ends when the driver closes it.
 pub struct Subscription {
     reader: Box<dyn BufRead + Send>,
-    pending: VecDeque<Event>,
     // Kept so that the connection stays open in both directions.
     _writer: Box<dyn Write + Send>,
 }
 
 impl fmt::Debug for Subscription {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Subscription")
-            .field("pending", &self.pending)
-            .finish_non_exhaustive()
+        f.debug_struct("Subscription").finish_non_exhaustive()
     }
 }
 
 impl Subscription {
     /// Waits for the next event.
     pub fn next_event(&mut self) -> Result<Event> {
-        if let Some(event) = self.pending.pop_front() {
-            return Ok(event);
-        }
         loop {
             let message = read_message(&mut self.reader)?;
             if message.contains_key("event") {
@@ -382,24 +363,40 @@ mod tests {
     }
 
     #[test]
-    fn subscribe_with_acknowledgement() {
-        let (c, _) = client(concat!(
-            "{\"id\":1,\"result\":null}\n",
-            "{\"event\":\"gun_added\",\"gun\":{\"player\":1,\"state\":\"aiming\"}}\n",
+    fn subscribe_returns_the_status_then_events() {
+        let (c, sink) = client(concat!(
+            "{\"id\":1,\"result\":{\"guns\":[{\"player\":1,\"state\":\"starting\"}]}}\n",
+            "{\"event\":\"gun_added\",\"gun\":{\"player\":2,\"state\":\"aiming\"}}\n",
             "{\"event\":\"state\",\"gun\":{\"player\":1,\"state\":\"aimed_away\"}}\n",
         ));
-        let events: Vec<Event> = c.subscribe().unwrap().map(Result::unwrap).collect();
+        let (status, events) = c.subscribe().unwrap();
+        assert_eq!(status.guns[0].state, GunState::Starting);
+        let events: Vec<Event> = events.map(Result::unwrap).collect();
         assert_eq!(events.len(), 2);
-        assert!(matches!(&events[0], Event::GunAdded(g) if g.player == 1));
+        assert!(matches!(&events[0], Event::GunAdded(g) if g.player == 2));
         assert!(matches!(&events[1], Event::State(g) if g.state == GunState::AimedAway));
+        assert_eq!(sink.lines()[0]["method"], "subscribe");
     }
 
     #[test]
-    fn subscribe_without_acknowledgement() {
-        let (c, _) =
-            client("{\"event\":\"gun_removed\",\"gun\":{\"player\":2,\"state\":\"stopped\"}}\n");
-        let events: Vec<Event> = c.subscribe().unwrap().map(Result::unwrap).collect();
-        assert!(matches!(&events[..], [Event::GunRemoved(g)] if g.player == 2));
+    fn events_before_the_subscribe_response_are_dropped() {
+        let (c, _) = client(concat!(
+            "{\"event\":\"gun_removed\",\"gun\":{\"player\":2,\"state\":\"stopped\"}}\n",
+            "{\"id\":1,\"result\":null}\n",
+        ));
+        let (status, events) = c.subscribe().unwrap();
+        assert_eq!(status.guns, []);
+        assert_eq!(events.count(), 0);
+    }
+
+    #[test]
+    fn error_shape_of_the_driver() {
+        let (mut c, _) = client("{\"id\":1,\"error\":\"bad key \\\"a b\\\"\"}\n");
+        let values = BTreeMap::from([("a b".to_owned(), "1".to_owned())]);
+        match c.set_config(&values) {
+            Err(Error::Service(message)) => assert_eq!(message, "bad key \"a b\""),
+            other => panic!("unexpected {other:?}"),
+        }
     }
 
     #[test]

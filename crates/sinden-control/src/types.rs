@@ -44,6 +44,8 @@ pub struct Gun {
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum GunState {
+    /// Opening the gun's port and camera.
+    Starting,
     /// Aiming at the screen.
     Aiming,
     /// Aimed away from the screen.

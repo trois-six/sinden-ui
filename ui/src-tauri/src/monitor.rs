@@ -1,6 +1,6 @@
-//! Follows the driver: connects, reads `version` and `status`, then keeps
-//! the guns up to date from a `subscribe` connection. When the driver is
-//! not reachable it retries every few seconds.
+//! Follows the driver: reads `version`, then keeps the guns up to date
+//! from a `subscribe` connection (its first answer is the status). When
+//! the driver is not reachable it retries every few seconds.
 
 use std::sync::{Mutex, PoisonError};
 use std::thread;
@@ -101,12 +101,11 @@ pub fn spawn<R: Runtime>(app: AppHandle<R>) {
 /// One connection to the driver, until it fails or closes.
 fn session<R: Runtime>(app: &AppHandle<R>) -> Result<(), Error> {
     let endpoint = app.state::<crate::AppState>().monitor.endpoint().clone();
-    let mut client = Client::connect(&endpoint)?;
-    let version = client.version()?;
-    // Subscribe before reading the status so that no event is missed.
-    let mut events = Client::connect_with_timeout(&endpoint, None)?.subscribe()?;
-    let mut guns = Guns::from_status(client.status()?);
-    drop(client);
+    let version = Client::connect(&endpoint)?.version()?;
+    // `subscribe` answers with the current status, then only sends events
+    // on its connection.
+    let (status, mut events) = Client::connect_with_timeout(&endpoint, None)?.subscribe()?;
+    let mut guns = Guns::from_status(status);
 
     let status = |guns: &Guns| ServiceStatus {
         connected: true,

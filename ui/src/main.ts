@@ -124,6 +124,13 @@ function applyLanguage(): void {
 
 // ---- Service and guns ----------------------------------------------------
 
+const KNOWN_STATES = new Set(["starting", "aiming", "aimed_away", "calibrating", "stopped"]);
+
+/** A newer driver may report states this UI does not know. */
+function stateKey(state: string): MsgKey {
+  return (KNOWN_STATES.has(state) ? `state.${state}` : "state.unknown") as MsgKey;
+}
+
 function renderStatus(): void {
   const status = state.status;
   const service = $("service");
@@ -145,9 +152,9 @@ function renderStatus(): void {
   const cards = status.guns.map((gun) =>
     h(
       "div",
-      { class: `gun state-${gun.state}` },
+      { class: `gun state-${KNOWN_STATES.has(gun.state) ? gun.state : "unknown"}` },
       h("strong", {}, t("gun.player", { player: gun.player })),
-      h("span", { class: "badge" }, t(`state.${gun.state}` as MsgKey)),
+      h("span", { class: "badge" }, t(stateKey(gun.state))),
       h(
         "small",
         {},

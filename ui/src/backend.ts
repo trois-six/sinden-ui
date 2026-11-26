@@ -5,7 +5,8 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
 import type { Values } from "./config.ts";
 
-export type GunState = "aiming" | "aimed_away" | "calibrating" | "stopped" | "unknown";
+/** The driver's gun states; anything else is shown as "unknown". */
+export type GunState = "starting" | "aiming" | "aimed_away" | "calibrating" | "stopped" | "unknown";
 
 export type Gun = {
   player: number;

@@ -118,7 +118,10 @@ fn serve(stream: &UnixStream, shared: &Mutex<Shared>) {
         let response = match method {
             "subscribe" => {
                 let mut shared = lock(shared);
-                if writeln!(writer, "{}", json!({"id": id, "result": null})).is_ok()
+                // The driver answers with the current status, then sends
+                // only events on this connection.
+                let status = json!({"guns": shared.guns});
+                if writeln!(writer, "{}", json!({"id": id, "result": status})).is_ok()
                     && let Ok(subscriber) = stream.try_clone()
                 {
                     shared.subscribers.push(subscriber);

@@ -10,8 +10,11 @@
 //! <- {"id": 2, "error": "..."}
 //! ```
 //!
-//! After `subscribe`, the connection carries events, one per line, without
-//! `id`: `{"event": "gun_added" | "gun_removed" | "state", "gun": {...}}`.
+//! `subscribe` answers with the current status (`{"guns": [...]}`); after
+//! it, that connection only carries events, one per line, without `id`:
+//! `{"event": "gun_added" | "gun_removed" | "state", "gun": {...}}` (the
+//! driver coalesces them into differences between snapshots). Other
+//! requests go over another connection.
 //!
 //! ```no_run
 //! use sinden_control::{Client, Endpoint};

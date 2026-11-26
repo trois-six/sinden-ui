@@ -95,11 +95,12 @@ fn subscription_follows_the_guns() {
     .unwrap();
     let endpoint = Endpoint::new(driver.path());
 
-    let mut guns = Guns::from_status(Client::connect(&endpoint).unwrap().status().unwrap());
-    let mut events = Client::connect_with_timeout(&endpoint, None)
+    let (status, mut events) = Client::connect_with_timeout(&endpoint, None)
         .unwrap()
         .subscribe()
         .unwrap();
+    let mut guns = Guns::from_status(status);
+    assert_eq!(guns.as_slice(), [gun(1, GunState::Aiming)]);
     wait_until("the subscriber", || driver.subscriber_count() == 1);
 
     driver.emit(&Event::GunAdded(gun(2, GunState::Aiming)));

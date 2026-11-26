@@ -45,7 +45,7 @@ body { margin: 0; background: var(--bg); color: var(--text); }
 .guns { display: flex; flex-wrap: wrap; gap: 10px; padding: 12px 20px 0; }
 .gun { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; min-width: 180px; border-radius: 8px; background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--muted); }
 .gun.state-aiming { border-left-color: var(--ok); }
-.gun.state-aimed_away, .gun.state-calibrating { border-left-color: var(--warn); }
+.gun.state-starting, .gun.state-aimed_away, .gun.state-calibrating { border-left-color: var(--warn); }
 .gun.state-stopped { border-left-color: var(--down); }
 .gun small { color: var(--muted); }
 
