@@ -6,9 +6,11 @@
 # Components:
 #   com.sinden-driver.pkg.driver  the driver, wrapped in SindenDriver.app (so
 #                                 that the camera permission has a name and a
-#                                 usage string), the LaunchAgent, a
-#                                 /usr/local/bin/sinden-driver link and an
-#                                 uninstall script; always installed
+#                                 usage string), a /usr/local/bin/sinden-driver
+#                                 link and an uninstall script; its
+#                                 postinstall runs `sinden-driver service
+#                                 install` as the logged-in user (the
+#                                 driver's LaunchAgent); always installed
 #   com.sinden-driver.pkg.ui      the tray application in /Applications;
 #                                 optional (a choice of the installer), only
 #                                 when --ui is given
@@ -60,7 +62,7 @@ sign() {
 # --- Driver component ---------------------------------------------------------
 support="$work/driver-root/Library/Application Support/SindenDriver"
 bundle="$support/SindenDriver.app"
-mkdir -p "$bundle/Contents/MacOS" "$work/driver-root/Library/LaunchAgents"
+mkdir -p "$bundle/Contents/MacOS"
 cp "$driver" "$bundle/Contents/MacOS/sinden-driver"
 chmod 0755 "$bundle/Contents/MacOS/sinden-driver"
 sed "s/@VERSION@/$version/g" "$here/driver-Info.plist" >"$bundle/Contents/Info.plist"
@@ -68,7 +70,6 @@ cp "$root/NOTICE" "$support/NOTICE.txt"
 cp "$root/packaging/common/LightgunMono.exe.config" "$support/LightgunMono.exe.config.default"
 cp "$here/uninstall.sh" "$support/uninstall.sh"
 chmod 0755 "$support/uninstall.sh"
-cp "$here/com.sinden-driver.agent.plist" "$work/driver-root/Library/LaunchAgents/"
 sign "$bundle" "$here/driver.entitlements"
 
 pkgbuild \

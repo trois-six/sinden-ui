@@ -1,8 +1,10 @@
 #!/bin/sh
-# sinden-driver pkg: stop the agent of the logged-in user before an upgrade.
+# sinden-driver pkg: an upgrade stops the logged-in user's agent first
+# (with the driver being replaced).
+bin="/Library/Application Support/SindenDriver/SindenDriver.app/Contents/MacOS/sinden-driver"
 user=$(stat -f %Su /dev/console)
-if [ -n "$user" ] && [ "$user" != "root" ] && [ "$user" != "loginwindow" ]; then
+if [ -x "$bin" ] && [ -n "$user" ] && [ "$user" != "root" ] && [ "$user" != "loginwindow" ]; then
 	uid=$(id -u "$user")
-	launchctl bootout "gui/$uid/com.sinden-driver.agent" 2>/dev/null || true
+	launchctl asuser "$uid" sudo -u "$user" "$bin" service stop >/dev/null 2>&1 || true
 fi
 exit 0

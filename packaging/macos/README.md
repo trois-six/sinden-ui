@@ -13,14 +13,16 @@ packaging/macos/build-pkg.sh --ui "target/universal-apple-darwin/release/bundle/
 
 | Choice | Contents |
 |---|---|
-| Driver (required) | `/Library/Application Support/SindenDriver/SindenDriver.app` (the driver binary in a minimal bundle), `/Library/LaunchAgents/com.sinden-driver.agent.plist`, the link `/usr/local/bin/sinden-driver`, `uninstall.sh` |
+| Driver (required) | `/Library/Application Support/SindenDriver/SindenDriver.app` (the driver binary in a minimal bundle), the link `/usr/local/bin/sinden-driver`, `uninstall.sh` |
 | Tray application (optional, selected by default) | `/Applications/Sinden Driver.app` |
 
-* The LaunchAgent `com.sinden-driver.agent` (roadmap § 3.2) runs
-  `sinden-driver service run` as the logged-in user: a LaunchDaemon cannot
-  get the camera permission. In `/Library/LaunchAgents` it starts for
-  every user at login; the postinstall script starts it at once for the
-  user logged in.
+* The driver installs its own LaunchAgent `com.sinden-driver.agent`
+  (roadmap § 3.2) for the current user with `sinden-driver service
+  install`, run as that user (a LaunchDaemon cannot get the camera
+  permission). The postinstall script runs `service install` and
+  `service start` as the logged-in user, through the bundle's path; other
+  users of the Mac run `sinden-driver service install` once. An upgrade
+  stops the agent first (`service stop`).
 * The driver is wrapped in `SindenDriver.app` with an `Info.plist`
   (`NSCameraUsageDescription`, `LSUIElement`): macOS then asks for the
   camera under the name "Sinden Driver" and remembers the answer for the
@@ -30,9 +32,6 @@ packaging/macos/build-pkg.sh --ui "target/universal-apple-darwin/release/bundle/
 * Configuration: `~/Library/Application Support/SindenDriver/LightgunMono.exe.config`
   per user (created by the driver; a default copy sits next to the bundle).
 * Uninstall: `sudo "/Library/Application Support/SindenDriver/uninstall.sh"`.
-
-The driver's own `sinden-driver service install` registers a per-user
-agent with the same label; with this package it is not needed.
 
 ## Signing and notarisation
 
