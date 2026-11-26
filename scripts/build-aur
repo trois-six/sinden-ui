@@ -1,0 +1,138 @@
+#!/usr/bin/env python3
+"""Render the AUR packages into dist/aur/<package>/ (PKGBUILD, files, .SRCINFO).
+
+Usage:
+    scripts/build-aur [--out DIR] [--no-srcinfo]
+
+sinden-driver-bin takes pkgver and the per-architecture checksums from
+driver.lock; sinden-driver-ui takes pkgver from ui/package.json and the
+checksum of the GitHub tag tarball when the tag exists. .SRCINFO comes from
+`makepkg --printsrcinfo`, run locally on Arch or in an archlinux container.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+AUR = ROOT / "packaging" / "aur"
+ARCH_OF_TARGET = {
+    "x86_64-unknown-linux-musl": "x86_64",
+    "aarch64-unknown-linux-musl": "aarch64",
+    "armv7-unknown-linux-musleabihf": "armv7h",
+}
+DRIVER_FILES = {
+    "sinden-driver.service": ROOT / "packaging/linux/files/sinden-driver.service",
+    "60-sinden-driver.rules": ROOT / "packaging/linux/files/60-sinden-driver.rules",
+    "sinden-driver.sysusers": ROOT / "packaging/linux/files/sinden-driver.sysusers",
+    "LightgunMono.exe.config": ROOT / "packaging/common/LightgunMono.exe.config",
+    "NOTICE": ROOT / "NOTICE",
+}
+ARCHLINUX_IMAGE = "archlinux:base-devel"
+
+
+def sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def set_var(pkgbuild: str, name: str, value: str) -> str:
+    """Replaces `name=...` (a scalar or a possibly multi-line array)."""
+    pattern = re.compile(rf"^{re.escape(name)}=(\([^)]*\)|[^\n]*)$", re.MULTILINE)
+    if not pattern.search(pkgbuild):
+        raise SystemExit(f"build-aur: {name} not found in the PKGBUILD template")
+    return pattern.sub(lambda _: f"{name}={value}", pkgbuild, count=1)
+
+
+def array(values: list[str]) -> str:
+    return "(" + "\n            ".join(f"'{v}'" for v in values) + ")"
+
+
+def render_driver(out: Path) -> Path:
+    lock = json.loads((ROOT / "driver.lock").read_text(encoding="utf-8"))
+    dest = out / "sinden-driver-bin"
+    shutil.rmtree(dest, ignore_errors=True)
+    dest.mkdir(parents=True)
+    pkgbuild = (AUR / "sinden-driver-bin" / "PKGBUILD").read_text(encoding="utf-8")
+    pkgbuild = set_var(pkgbuild, "pkgver", lock["version"])
+    if lock["tag"] and lock["tag"] != f"driver-v{lock['version']}":
+        raise SystemExit(f"build-aur: tag {lock['tag']} is not driver-v{lock['version']}")
+    for name, source in DRIVER_FILES.items():
+        shutil.copyfile(source, dest / name)
+    pkgbuild = set_var(pkgbuild, "sha256sums", array([sha256(dest / n) for n in DRIVER_FILES]))
+    for target, arch in ARCH_OF_TARGET.items():
+        asset = lock["assets"].get(target)
+        if asset is None:
+            print(f"warning: driver.lock has no {target}: sha256sums_{arch} stays SKIP", file=sys.stderr)
+            continue
+        pkgbuild = set_var(pkgbuild, f"sha256sums_{arch}", f"('{asset['sha256']}')")
+    (dest / "PKGBUILD").write_text(pkgbuild, encoding="utf-8")
+    shutil.copyfile(AUR / "sinden-driver-bin" / "sinden-driver.install", dest / "sinden-driver.install")
+    return dest
+
+
+def render_ui(out: Path) -> Path:
+    version = json.loads((ROOT / "ui" / "package.json").read_text(encoding="utf-8"))["version"]
+    dest = out / "sinden-driver-ui"
+    shutil.rmtree(dest, ignore_errors=True)
+    dest.mkdir(parents=True)
+    pkgbuild = (AUR / "sinden-driver-ui" / "PKGBUILD").read_text(encoding="utf-8")
+    pkgbuild = set_var(pkgbuild, "pkgver", version)
+    url = f"https://github.com/trois-six/sinden-ui/archive/refs/tags/v{version}.tar.gz"
+    try:
+        request = urllib.request.Request(url, headers={"User-Agent": "sinden-ui-build-aur"})
+        with urllib.request.urlopen(request, timeout=60) as response:
+            digest = hashlib.sha256(response.read()).hexdigest()
+        pkgbuild = set_var(pkgbuild, "sha256sums", f"('{digest}')")
+    except (urllib.error.URLError, OSError) as err:
+        print(f"warning: {url}: {err}; sha256sums stays SKIP (tag not pushed yet?)", file=sys.stderr)
+    (dest / "PKGBUILD").write_text(pkgbuild, encoding="utf-8")
+    return dest
+
+
+def srcinfo(package_dir: Path) -> None:
+    if shutil.which("makepkg"):
+        result = subprocess.run(["makepkg", "--printsrcinfo"], cwd=package_dir, capture_output=True, text=True)
+    elif shutil.which("docker"):
+        result = subprocess.run(
+            [
+                "docker", "run", "--rm", "--network=none",
+                "--user", f"{os.getuid()}:{os.getgid()}",
+                "-e", "BUILDDIR=/tmp", "-e", "PKGDEST=/tmp", "-e", "SRCDEST=/tmp",
+                "-e", "SRCPKGDEST=/tmp", "-e", "LOGDEST=/tmp", "-e", "HOME=/tmp",
+                "-v", f"{package_dir}:/pkg:ro", "-w", "/pkg",
+                ARCHLINUX_IMAGE, "makepkg", "--printsrcinfo",
+            ],
+            capture_output=True,
+            text=True,
+        )
+    else:
+        print(f"warning: no makepkg nor docker: write {package_dir}/.SRCINFO on Arch", file=sys.stderr)
+        return
+    if result.returncode != 0:
+        raise SystemExit(f"build-aur: makepkg --printsrcinfo failed in {package_dir}:\n{result.stderr}")
+    (package_dir / ".SRCINFO").write_text(result.stdout, encoding="utf-8")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(prog="build-aur", description=__doc__.split("\n\n")[0])
+    parser.add_argument("--out", type=Path, default=ROOT / "dist" / "aur")
+    parser.add_argument("--no-srcinfo", action="store_true", help="do not generate .SRCINFO")
+    args = parser.parse_args()
+    for package_dir in (render_driver(args.out.resolve()), render_ui(args.out.resolve())):
+        if not args.no_srcinfo:
+            srcinfo(package_dir)
+        print(f"rendered {package_dir}")
+
+
+if __name__ == "__main__":
+    main()

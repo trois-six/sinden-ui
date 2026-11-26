@@ -1,0 +1,17 @@
+# The user `sinden` exists once pacman's sysusers hook has run.
+_own_config() {
+  chown root:sinden etc/sinden-driver etc/sinden-driver/LightgunMono.exe.config
+  chmod 0775 etc/sinden-driver
+}
+
+post_install() {
+  _own_config
+  echo ">>> Start the driver now and at boot:"
+  echo ">>>   systemctl enable --now sinden-driver.service"
+  echo ">>> Replug the guns (or run 'udevadm trigger') so that the udev rule applies."
+}
+
+post_upgrade() {
+  _own_config
+  echo ">>> Restart the driver: systemctl try-restart sinden-driver.service"
+}

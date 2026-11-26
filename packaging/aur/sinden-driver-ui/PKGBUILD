@@ -1,0 +1,48 @@
+# Maintainer: trois-six <trois-six at users dot noreply dot github dot com>
+#
+# Template kept in https://github.com/trois-six/sinden-ui
+# (packaging/aur/sinden-driver-ui). scripts/build-aur fills pkgver and the
+# checksum. Built from source: the application is free software and links
+# against the system's WebKitGTK, so a binary built elsewhere would not do.
+
+pkgname=sinden-driver-ui
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Tray application for the Sinden light gun driver"
+arch=('x86_64' 'aarch64')
+url="https://github.com/trois-six/sinden-ui"
+license=('MIT')
+depends=('webkit2gtk-4.1' 'gtk3' 'libayatana-appindicator' 'hicolor-icon-theme')
+makedepends=('cargo' 'npm')
+optdepends=('sinden-driver: the driver service this application configures')
+source=("sinden-ui-${pkgver}.tar.gz::https://github.com/trois-six/sinden-ui/archive/refs/tags/v${pkgver}.tar.gz")
+sha256sums=('SKIP')
+
+prepare() {
+  cd "sinden-ui-${pkgver}"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+  cd ui
+  npm ci
+}
+
+build() {
+  cd "sinden-ui-${pkgver}/ui"
+  export RUSTUP_TOOLCHAIN=stable
+  npm run tauri build -- --no-bundle -- --frozen
+}
+
+check() {
+  cd "sinden-ui-${pkgver}"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo test --frozen -p sinden-control
+}
+
+package() {
+  cd "sinden-ui-${pkgver}"
+  install -Dm755 target/release/sinden-driver-ui "${pkgdir}/usr/bin/sinden-driver-ui"
+  install -Dm644 packaging/linux/files/sinden-driver-ui.desktop \
+    "${pkgdir}/usr/share/applications/sinden-driver-ui.desktop"
+  cp -r --no-preserve=ownership packaging/linux/icons "${pkgdir}/usr/share/"
+  install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}

@@ -1,0 +1,45 @@
+# Maintainer: trois-six <trois-six at users dot noreply dot github dot com>
+#
+# Template kept in https://github.com/trois-six/sinden-ui
+# (packaging/aur/sinden-driver-bin). scripts/build-aur fills pkgver and the
+# checksums from driver.lock and copies the support files next to it.
+
+pkgname=sinden-driver-bin
+pkgver=0.0.0
+pkgrel=1
+pkgdesc="Driver service for the Sinden light gun (prebuilt static binary)"
+arch=('x86_64' 'aarch64' 'armv7h')
+url="https://github.com/trois-six/sinden-ui"
+license=('LicenseRef-sinden-driver')
+provides=('sinden-driver')
+conflicts=('sinden-driver')
+backup=('etc/sinden-driver/LightgunMono.exe.config')
+install=sinden-driver.install
+options=('!strip' '!debug')
+
+_release="https://github.com/trois-six/sinden-ui/releases/download/driver-v${pkgver}"
+source=('sinden-driver.service'
+        '60-sinden-driver.rules'
+        'sinden-driver.sysusers'
+        'LightgunMono.exe.config'
+        'NOTICE')
+source_x86_64=("sinden-driver-${pkgver}-x86_64::${_release}/sinden-driver-${pkgver}-x86_64-unknown-linux-musl")
+source_aarch64=("sinden-driver-${pkgver}-aarch64::${_release}/sinden-driver-${pkgver}-aarch64-unknown-linux-musl")
+source_armv7h=("sinden-driver-${pkgver}-armv7h::${_release}/sinden-driver-${pkgver}-armv7-unknown-linux-musleabihf")
+sha256sums=('SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP')
+sha256sums_x86_64=('SKIP')
+sha256sums_aarch64=('SKIP')
+sha256sums_armv7h=('SKIP')
+
+package() {
+  install -Dm755 "sinden-driver-${pkgver}-${CARCH}" "${pkgdir}/usr/bin/sinden-driver"
+  install -Dm644 sinden-driver.service "${pkgdir}/usr/lib/systemd/system/sinden-driver.service"
+  install -Dm644 60-sinden-driver.rules "${pkgdir}/usr/lib/udev/rules.d/60-sinden-driver.rules"
+  install -Dm644 sinden-driver.sysusers "${pkgdir}/usr/lib/sysusers.d/sinden-driver.conf"
+  install -Dm664 LightgunMono.exe.config "${pkgdir}/etc/sinden-driver/LightgunMono.exe.config"
+  install -Dm644 NOTICE "${pkgdir}/usr/share/licenses/${pkgname}/NOTICE"
+}
