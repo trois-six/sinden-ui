@@ -1,0 +1,157 @@
+#!/usr/bin/env python3
+"""Build the deb and rpm packages with nfpm.
+
+Usage:
+    scripts/build-linux-packages [--target TARGET]... [--ui BINARY [--ui-arch ARCH]]
+                                 [--format deb|rpm]... [--release N] [--out DIR]
+
+sinden-driver is built for every Linux target found in dist/driver/ (run
+scripts/fetch-driver first, or fetch-driver --stub); sinden-driver-ui only
+when --ui names the UI binary. nfpm is taken from the PATH or installed
+with `go install` into .tools/ (pinned version).
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import platform
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+NFPM_VERSION = "v2.49.0"
+
+# Rust target -> nfpm architecture (nfpm maps it to deb/rpm names).
+LINUX_TARGETS = {
+    "x86_64-unknown-linux-musl": "amd64",
+    "aarch64-unknown-linux-musl": "arm64",
+    "armv7-unknown-linux-musleabihf": "arm7",
+}
+HOST_ARCH = {"x86_64": "amd64", "amd64": "amd64", "aarch64": "arm64", "arm64": "arm64"}
+
+
+def fail(message: str) -> None:
+    print(f"build-linux-packages: error: {message}", file=sys.stderr)
+    sys.exit(1)
+
+
+def find_nfpm() -> str:
+    found = shutil.which("nfpm")
+    if found:
+        return found
+    local = ROOT / ".tools" / "bin" / "nfpm"
+    if local.is_file():
+        return str(local)
+    if not shutil.which("go"):
+        fail("nfpm not found and Go is not installed to build it (https://nfpm.goreleaser.com/install/)")
+    print(f"installing nfpm {NFPM_VERSION} into .tools/")
+    env = dict(os.environ, GOBIN=str(local.parent), GOPATH=str(ROOT / ".tools" / "go"), GOFLAGS="-modcacherw")
+    subprocess.run(
+        ["go", "install", f"github.com/goreleaser/nfpm/v2/cmd/nfpm@{NFPM_VERSION}"], check=True, env=env
+    )
+    return str(local)
+
+
+def driver_version(driver_dir: Path) -> str:
+    version = json.loads((ROOT / "driver.lock").read_text(encoding="utf-8"))["version"]
+    if (driver_dir / "STUB").exists():
+        print("warning: dist/driver holds STUB binaries; the packages are not usable", file=sys.stderr)
+        version += "~stub"
+    return version
+
+
+def ui_version() -> str:
+    return json.loads((ROOT / "ui" / "package.json").read_text(encoding="utf-8"))["version"]
+
+
+def stage(binary: Path, name: str) -> None:
+    """Copies binary to dist/stage/<name>, the path the nfpm configs read."""
+    dest = ROOT / "dist" / "stage" / name
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(binary, dest)
+    dest.chmod(0o755)
+
+
+def nfpm_package(nfpm: str, config: str, fmt: str, out: Path, env: dict[str, str]) -> None:
+    out.mkdir(parents=True, exist_ok=True)
+    result = subprocess.run(
+        [nfpm, "package", "--config", config, "--packager", fmt, "--target", str(out)],
+        check=False,
+        cwd=ROOT,
+        env=dict(os.environ, **env),
+    )
+    if result.returncode != 0:
+        fail(f"nfpm failed on {config} ({fmt})")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(prog="build-linux-packages", description=__doc__.split("\n\n")[0])
+    parser.add_argument("--target", action="append", dest="targets", choices=sorted(LINUX_TARGETS))
+    parser.add_argument("--ui", type=Path, help="the sinden-driver-ui binary to package")
+    parser.add_argument("--ui-arch", choices=sorted(set(HOST_ARCH.values())), help="its architecture (default: host)")
+    parser.add_argument("--format", action="append", dest="formats", choices=["deb", "rpm"])
+    parser.add_argument("--release", default="1", help="package release number (default 1)")
+    parser.add_argument("--driver-dir", type=Path, default=ROOT / "dist" / "driver")
+    parser.add_argument("--out", type=Path, default=ROOT / "dist" / "packages")
+    parser.add_argument("--skip-driver", action="store_true", help="only build sinden-driver-ui")
+    args = parser.parse_args()
+
+    formats = args.formats or ["deb", "rpm"]
+    out = args.out.resolve()
+    nfpm = find_nfpm()
+
+    if not args.skip_driver:
+        targets = args.targets or [t for t in LINUX_TARGETS if (args.driver_dir / t / "sinden-driver").is_file()]
+        if not targets:
+            fail(f"no Linux driver binary in {args.driver_dir} (run scripts/fetch-driver or fetch-driver --stub)")
+        version = driver_version(args.driver_dir)
+        for target in targets:
+            binary = (args.driver_dir / target / "sinden-driver").resolve()
+            if not binary.is_file():
+                fail(f"{binary} not found (run scripts/fetch-driver --target {target})")
+            stage(binary, "sinden-driver")
+            for fmt in formats:
+                print(f"sinden-driver {version} {target} {fmt}")
+                nfpm_package(
+                    nfpm,
+                    "packaging/linux/nfpm/sinden-driver.yaml",
+                    fmt,
+                    out,
+                    {
+                        "NFPM_ARCH": LINUX_TARGETS[target],
+                        "SINDEN_DRIVER_VERSION": version,
+                        "SINDEN_PKG_RELEASE": args.release,
+                    },
+                )
+
+    if args.ui:
+        binary = args.ui.resolve()
+        if not binary.is_file():
+            fail(f"{binary} not found (build the UI first: cd ui && npm run tauri build -- --no-bundle)")
+        arch = args.ui_arch or HOST_ARCH.get(platform.machine().lower())
+        if not arch:
+            fail(f"unknown host architecture {platform.machine()}; pass --ui-arch")
+        stage(binary, "sinden-driver-ui")
+        for fmt in formats:
+            print(f"sinden-driver-ui {ui_version()} {arch} {fmt}")
+            nfpm_package(
+                nfpm,
+                "packaging/linux/nfpm/sinden-driver-ui.yaml",
+                fmt,
+                out,
+                {
+                    "NFPM_ARCH": arch,
+                    "SINDEN_UI_VERSION": ui_version(),
+                    "SINDEN_PKG_RELEASE": args.release,
+                },
+            )
+
+    print(f"packages in {out}")
+
+
+if __name__ == "__main__":
+    main()

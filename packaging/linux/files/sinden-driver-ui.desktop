@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Sinden Driver
+GenericName=Light gun settings
+GenericName[fr]=Réglages du pistolet optique
+Comment=Settings and status of the Sinden light gun driver
+Comment[fr]=Réglages et état du pilote du pistolet optique Sinden
+Exec=sinden-driver-ui
+Icon=sinden-driver-ui
+Terminal=false
+Categories=Settings;HardwareSettings;Game;
+Keywords=sinden;lightgun;light gun;gun;
+StartupNotify=false

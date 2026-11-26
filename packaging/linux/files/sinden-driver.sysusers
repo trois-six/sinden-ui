@@ -1,0 +1,3 @@
+# sinden-driver system user (sysusers.d(5)).
+# To be REGENERATED from `sinden-driver service print-files`.
+u sinden - "Sinden light gun driver" /var/empty -

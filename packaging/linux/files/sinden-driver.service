@@ -1,0 +1,35 @@
+# sinden-driver systemd unit.
+#
+# Written by hand from the driver's service plan; to be REGENERATED from
+# `sinden-driver service print-files` once the driver provides it.
+[Unit]
+Description=Sinden light gun driver
+Documentation=https://github.com/trois-six/sinden-ui
+After=systemd-udevd.service
+
+[Service]
+Type=simple
+User=sinden
+Group=sinden
+# /run/sinden-driver/control.sock (mode 0666) lives here.
+RuntimeDirectory=sinden-driver
+RuntimeDirectoryMode=0755
+ExecStart=/usr/bin/sinden-driver service run
+Restart=on-failure
+RestartSec=2
+
+# The guns' serial ports, cameras and input nodes are opened through the
+# group the udev rule gives them; set_config rewrites the configuration.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/etc/sinden-driver
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+
+[Install]
+WantedBy=multi-user.target

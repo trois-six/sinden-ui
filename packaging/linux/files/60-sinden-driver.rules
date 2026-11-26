@@ -1,0 +1,15 @@
+# sinden-driver udev rule: gives the group `sinden` (the service's user)
+# access to the Sinden light gun's serial port, camera and input nodes.
+#
+# Written by hand; to be REGENERATED from `sinden-driver service
+# print-files` once the driver provides it (the USB identifiers below are
+# the driver's to confirm).
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="16c0", ATTRS{idProduct}=="0f01|0f02|0f38|0f39", GOTO="sinden_match"
+GOTO="sinden_end"
+
+LABEL="sinden_match"
+SUBSYSTEM=="tty", GROUP="sinden", MODE="0660"
+SUBSYSTEM=="video4linux", GROUP="sinden", MODE="0660"
+SUBSYSTEM=="input", KERNEL=="event*", GROUP="sinden", MODE="0660"
+
+LABEL="sinden_end"

@@ -1,0 +1,69 @@
+# nfpm: the sinden-driver package (deb, rpm).
+# Built by scripts/build-linux-packages from the repository root, which sets
+# NFPM_ARCH, SINDEN_DRIVER_VERSION and SINDEN_PKG_RELEASE and stages the
+# target's binary as dist/stage/sinden-driver.
+name: sinden-driver
+arch: ${NFPM_ARCH}
+platform: linux
+version: ${SINDEN_DRIVER_VERSION}
+release: ${SINDEN_PKG_RELEASE}
+section: misc
+priority: optional
+maintainer: trois-six <trois-six@users.noreply.github.com>
+vendor: trois-six
+homepage: https://github.com/trois-six/sinden-ui
+license: LicenseRef-sinden-driver (see /usr/share/doc/sinden-driver/NOTICE)
+description: |-
+  Driver service for the Sinden light gun.
+  Drives the guns (aim, buttons, recoil) as a systemd service; the guns
+  report as a mouse and keyboard or as a joystick. Configuration:
+  /etc/sinden-driver/LightgunMono.exe.config.
+
+contents:
+  - src: dist/stage/sinden-driver
+    dst: /usr/bin/sinden-driver
+    file_info:
+      mode: 0755
+
+  # Regenerate these three from `sinden-driver service print-files`.
+  - src: packaging/linux/files/sinden-driver.service
+    dst: /usr/lib/systemd/system/sinden-driver.service
+    file_info:
+      mode: 0644
+  - src: packaging/linux/files/60-sinden-driver.rules
+    dst: /usr/lib/udev/rules.d/60-sinden-driver.rules
+    file_info:
+      mode: 0644
+  - src: packaging/linux/files/sinden-driver.sysusers
+    dst: /usr/lib/sysusers.d/sinden-driver.conf
+    file_info:
+      mode: 0644
+
+  # The driver rewrites the file (set_config): the directory and the file
+  # belong to the group `sinden` (set by postinstall, once the user exists).
+  - dst: /etc/sinden-driver
+    type: dir
+    file_info:
+      mode: 0775
+  - src: packaging/common/LightgunMono.exe.config
+    dst: /etc/sinden-driver/LightgunMono.exe.config
+    type: config|noreplace
+    file_info:
+      mode: 0664
+
+  - src: NOTICE
+    dst: /usr/share/doc/sinden-driver/NOTICE
+    file_info:
+      mode: 0644
+
+scripts:
+  postinstall: packaging/linux/scripts/postinstall.sh
+  preremove: packaging/linux/scripts/preremove.sh
+  postremove: packaging/linux/scripts/postremove.sh
+
+# Optional rpm signature (rpm 6, e.g. Fedora 45+, refuses unsigned packages
+# by default): CI sets NFPM_RPM_KEY_FILE (an armored GPG private key) and
+# NFPM_RPM_PASSPHRASE when the signing secrets exist; empty = unsigned.
+rpm:
+  signature:
+    key_file: ${NFPM_RPM_KEY_FILE}

@@ -1,0 +1,55 @@
+# nfpm: the sinden-driver-ui package (deb, rpm), the optional tray
+# application. Built by scripts/build-linux-packages --ui, which sets
+# NFPM_ARCH, SINDEN_UI_VERSION and SINDEN_PKG_RELEASE and stages the binary
+# as dist/stage/sinden-driver-ui.
+name: sinden-driver-ui
+arch: ${NFPM_ARCH}
+platform: linux
+version: ${SINDEN_UI_VERSION}
+release: ${SINDEN_PKG_RELEASE}
+section: utils
+priority: optional
+maintainer: trois-six <trois-six@users.noreply.github.com>
+vendor: trois-six
+homepage: https://github.com/trois-six/sinden-ui
+license: MIT
+description: |-
+  Tray application for the Sinden light gun driver.
+  Shows the guns' state and edits every setting of the sinden-driver
+  service (mode, handedness, buttons, recoil, camera, calibration).
+
+recommends:
+  - sinden-driver
+overrides:
+  deb:
+    depends:
+      - libwebkit2gtk-4.1-0
+      - libayatana-appindicator3-1
+  rpm:
+    depends:
+      - webkit2gtk4.1
+      - libayatana-appindicator-gtk3
+
+contents:
+  - src: dist/stage/sinden-driver-ui
+    dst: /usr/bin/sinden-driver-ui
+    file_info:
+      mode: 0755
+  - src: packaging/linux/files/sinden-driver-ui.desktop
+    dst: /usr/share/applications/sinden-driver-ui.desktop
+    file_info:
+      mode: 0644
+  - src: packaging/linux/icons/hicolor
+    dst: /usr/share/icons/hicolor
+    type: tree
+  - src: LICENSE
+    dst: /usr/share/doc/sinden-driver-ui/LICENSE
+    file_info:
+      mode: 0644
+
+# Optional rpm signature (rpm 6, e.g. Fedora 45+, refuses unsigned packages
+# by default): CI sets NFPM_RPM_KEY_FILE (an armored GPG private key) and
+# NFPM_RPM_PASSPHRASE when the signing secrets exist; empty = unsigned.
+rpm:
+  signature:
+    key_file: ${NFPM_RPM_KEY_FILE}
