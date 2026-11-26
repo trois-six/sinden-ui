@@ -1,0 +1,236 @@
+#!/usr/bin/env python3
+"""Download the sinden-driver binaries pinned in driver.lock and verify them.
+
+Usage:
+    scripts/fetch-driver [--target TARGET]... [--out DIR] [--lock FILE]
+                         [--base-url URL] [--stub] [--list]
+
+Without --target, every target of driver.lock is fetched. Each binary is
+downloaded from <base-url>/<tag>/<file>, its SHA-256 checked against
+driver.lock, then installed as <out>/<target>/sinden-driver[.exe]. A
+mismatch deletes the download and exits with status 1.
+
+--stub writes placeholder binaries instead (no network): for building and
+inspecting packages before the first driver release or without access to
+it. A file <out>/STUB marks them; release jobs refuse to publish them.
+
+Only the Python standard library is used.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import re
+import shutil
+import stat
+import sys
+import tempfile
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+DEFAULT_BASE_URL = "https://github.com/trois-six/sinden-ui/releases/download"
+BASE_URL_ENV = "SINDEN_UI_RELEASE_BASE_URL"
+
+# Every target the driver's release workflow publishes (roadmap § 3.4).
+KNOWN_TARGETS = (
+    "x86_64-unknown-linux-musl",
+    "aarch64-unknown-linux-musl",
+    "armv7-unknown-linux-musleabihf",
+    "x86_64-pc-windows-msvc",
+    "universal-apple-darwin",
+)
+
+SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+FILE_RE = re.compile(r"^[A-Za-z0-9._+-]+$")
+CHUNK = 1 << 16
+
+STUB_SCRIPT = """#!/bin/sh
+# Placeholder written by scripts/fetch-driver --stub: NOT the real driver.
+echo "sinden-driver stub ($0 $*): this package was built without the driver binary." >&2
+exit 1
+"""
+
+
+class FetchError(Exception):
+    """A failure the user must see; the message says what to do."""
+
+
+def binary_name(target: str) -> str:
+    return "sinden-driver.exe" if "windows" in target else "sinden-driver"
+
+
+def load_lock(path: Path) -> dict:
+    try:
+        lock = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError as err:
+        raise FetchError(f"{path}: not found") from err
+    except json.JSONDecodeError as err:
+        raise FetchError(f"{path}: invalid JSON: {err}") from err
+    if not isinstance(lock, dict):
+        raise FetchError(f"{path}: the top level must be an object")
+    for key, kind in (("version", str), ("tag", str), ("assets", dict)):
+        if not isinstance(lock.get(key), kind):
+            raise FetchError(f"{path}: '{key}' is missing or not a {kind.__name__}")
+    for target, asset in lock["assets"].items():
+        if not isinstance(asset, dict):
+            raise FetchError(f"{path}: asset '{target}' must be an object")
+        file, digest = asset.get("file"), asset.get("sha256")
+        if not isinstance(file, str) or not FILE_RE.match(file) or file in (".", ".."):
+            raise FetchError(f"{path}: asset '{target}' has an invalid file name {file!r}")
+        if not isinstance(digest, str) or not SHA256_RE.match(digest):
+            raise FetchError(
+                f"{path}: asset '{target}' has an invalid sha256 {digest!r} "
+                "(64 lowercase hex digits expected)"
+            )
+    return lock
+
+
+def select_targets(lock: dict, wanted: list[str] | None, stub: bool) -> list[str]:
+    available = list(lock["assets"]) if not stub else list(KNOWN_TARGETS)
+    if not wanted:
+        if not available:
+            raise FetchError(
+                "driver.lock lists no assets (placeholder lock, no driver release yet); "
+                "use --stub to build packages with placeholder binaries"
+            )
+        return available
+    missing = [t for t in wanted if t not in available]
+    if missing:
+        raise FetchError(
+            f"target(s) not in driver.lock: {', '.join(missing)} "
+            f"(available: {', '.join(available) or 'none'})"
+        )
+    return wanted
+
+
+def sha256_of(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(CHUNK), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def download(url: str, dest: Path) -> str:
+    """Download url into dest (atomically) and return its SHA-256."""
+    digest = hashlib.sha256()
+    request = urllib.request.Request(url, headers={"User-Agent": "sinden-ui-fetch-driver"})
+    fd, tmp_name = tempfile.mkstemp(prefix=".part-", dir=dest.parent)
+    tmp = Path(tmp_name)
+    try:
+        with os.fdopen(fd, "wb") as out, urllib.request.urlopen(request, timeout=60) as resp:
+            for chunk in iter(lambda: resp.read(CHUNK), b""):
+                digest.update(chunk)
+                out.write(chunk)
+        tmp.replace(dest)
+    except (urllib.error.URLError, OSError) as err:
+        tmp.unlink(missing_ok=True)
+        raise FetchError(f"download failed: {url}: {err}") from err
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+    return digest.hexdigest()
+
+
+def install_binary(source: Path, out: Path, target: str) -> Path:
+    dest_dir = out / target
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest = dest_dir / binary_name(target)
+    shutil.copyfile(source, dest)
+    dest.chmod(dest.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+    return dest
+
+
+def fetch(lock: dict, targets: list[str], out: Path, base_url: str) -> None:
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "STUB").unlink(missing_ok=True)
+    for target in targets:
+        asset = lock["assets"][target]
+        expected = asset["sha256"]
+        dest = out / asset["file"]
+        if dest.is_file() and sha256_of(dest) == expected:
+            print(f"{target}: {asset['file']} already downloaded and verified")
+        else:
+            url = f"{base_url.rstrip('/')}/{lock['tag']}/{asset['file']}"
+            print(f"{target}: downloading {url}")
+            actual = download(url, dest)
+            if actual != expected:
+                dest.unlink(missing_ok=True)
+                raise FetchError(
+                    f"SHA-256 MISMATCH for {asset['file']} ({target})\n"
+                    f"  expected {expected} (driver.lock)\n"
+                    f"  got      {actual}\n"
+                    "The download was deleted. Do not use this file."
+                )
+            print(f"{target}: sha256 ok ({actual})")
+        installed = install_binary(dest, out, target)
+        print(f"{target}: installed {installed}")
+    (out / "VERSION").write_text(lock["version"] + "\n", encoding="utf-8")
+
+
+def write_stubs(lock: dict, targets: list[str], out: Path) -> None:
+    out.mkdir(parents=True, exist_ok=True)
+    for target in targets:
+        dest_dir = out / target
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        dest = dest_dir / binary_name(target)
+        dest.write_text(STUB_SCRIPT, encoding="utf-8")
+        dest.chmod(0o755)
+        print(f"{target}: wrote stub {dest}")
+    (out / "VERSION").write_text(lock["version"] + "\n", encoding="utf-8")
+    (out / "STUB").write_text(
+        "The binaries in this directory are placeholders (fetch-driver --stub).\n",
+        encoding="utf-8",
+    )
+
+
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    root = Path(__file__).resolve().parent.parent
+    parser = argparse.ArgumentParser(
+        prog="fetch-driver",
+        description="Download and verify the sinden-driver binaries pinned in driver.lock.",
+    )
+    parser.add_argument(
+        "--target", action="append", dest="targets", metavar="TARGET",
+        help="target triple to fetch (repeatable; default: every target of the lock)",
+    )
+    parser.add_argument("--lock", type=Path, default=root / "driver.lock", help="lock file")
+    parser.add_argument("--out", type=Path, default=root / "dist" / "driver", help="output directory")
+    parser.add_argument(
+        "--base-url", default=os.environ.get(BASE_URL_ENV, DEFAULT_BASE_URL),
+        help=f"release download base URL (default: ${BASE_URL_ENV} or {DEFAULT_BASE_URL})",
+    )
+    parser.add_argument("--stub", action="store_true", help="write placeholder binaries, no download")
+    parser.add_argument("--list", action="store_true", help="print version, tag and assets, then exit")
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(sys.argv[1:] if argv is None else argv)
+    try:
+        lock = load_lock(args.lock)
+        if args.list:
+            print(f"version {lock['version']}")
+            print(f"tag {lock['tag']}")
+            for target, asset in lock["assets"].items():
+                print(f"{target} {asset['file']} {asset['sha256']}")
+            return 0
+        targets = select_targets(lock, args.targets, args.stub)
+        if args.stub:
+            write_stubs(lock, targets, args.out)
+        else:
+            if not lock["tag"]:
+                raise FetchError(f"{args.lock}: 'tag' is empty")
+            fetch(lock, targets, args.out, args.base_url)
+    except FetchError as err:
+        print(f"fetch-driver: error: {err}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
