@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Info.plist of the bundle build-pkg.sh wraps around the driver binary, so
+  that macOS asks for (and remembers) the camera permission under a proper
+  name. @VERSION@ is filled by build-pkg.sh.
+-->
+<plist version="1.0">
+<dict>
+  <key>CFBundleIdentifier</key>
+  <string>com.sinden-driver.agent</string>
+  <key>CFBundleName</key>
+  <string>Sinden Driver</string>
+  <key>CFBundleDisplayName</key>
+  <string>Sinden Driver</string>
+  <key>CFBundleExecutable</key>
+  <string>sinden-driver</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleShortVersionString</key>
+  <string>@VERSION@</string>
+  <key>CFBundleVersion</key>
+  <string>@VERSION@</string>
+  <key>LSMinimumSystemVersion</key>
+  <string>11.0</string>
+  <key>LSUIElement</key>
+  <true/>
+  <key>NSCameraUsageDescription</key>
+  <string>The Sinden light gun's camera sees the screen's border to find where the gun points.</string>
+</dict>
+</plist>

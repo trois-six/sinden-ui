@@ -1,0 +1,8 @@
+#!/bin/sh
+# sinden-driver pkg: stop the agent of the logged-in user before an upgrade.
+user=$(stat -f %Su /dev/console)
+if [ -n "$user" ] && [ "$user" != "root" ] && [ "$user" != "loginwindow" ]; then
+	uid=$(id -u "$user")
+	launchctl bootout "gui/$uid/com.sinden-driver.agent" 2>/dev/null || true
+fi
+exit 0

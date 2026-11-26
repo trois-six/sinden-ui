@@ -1,0 +1,19 @@
+#!/bin/sh
+# sinden-driver pkg: command-line link, then start the agent for the
+# logged-in user (other users get it at their next login).
+set -e
+plist=/Library/LaunchAgents/com.sinden-driver.agent.plist
+chown root:wheel "$plist"
+chmod 0644 "$plist"
+
+mkdir -p /usr/local/bin
+ln -sf "/Library/Application Support/SindenDriver/SindenDriver.app/Contents/MacOS/sinden-driver" \
+	/usr/local/bin/sinden-driver
+
+user=$(stat -f %Su /dev/console)
+if [ -n "$user" ] && [ "$user" != "root" ] && [ "$user" != "loginwindow" ]; then
+	uid=$(id -u "$user")
+	launchctl bootstrap "gui/$uid" "$plist" 2>/dev/null ||
+		launchctl kickstart -k "gui/$uid/com.sinden-driver.agent" || true
+fi
+exit 0

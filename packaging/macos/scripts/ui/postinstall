@@ -1,0 +1,11 @@
+#!/bin/sh
+# sinden-driver-ui pkg: enable the login item of the logged-in user (the
+# app's own --autostart=on), then start it in the menu bar.
+app="/Applications/Sinden Driver.app"
+user=$(stat -f %Su /dev/console)
+if [ -n "$user" ] && [ "$user" != "root" ] && [ "$user" != "loginwindow" ]; then
+	uid=$(id -u "$user")
+	launchctl asuser "$uid" sudo -u "$user" "$app/Contents/MacOS/sinden-driver-ui" --autostart=on || true
+	launchctl asuser "$uid" sudo -u "$user" open -g -a "$app" --args --tray || true
+fi
+exit 0

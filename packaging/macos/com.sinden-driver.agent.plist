@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  sinden-driver LaunchAgent (roadmap § 3.2): runs the driver as the
+  logged-in user, who can grant it the camera permission (a LaunchDaemon
+  cannot). Installed in /Library/LaunchAgents, so it starts for every user
+  at login.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.sinden-driver.agent</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Library/Application Support/SindenDriver/SindenDriver.app/Contents/MacOS/sinden-driver</string>
+    <string>service</string>
+    <string>run</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <dict>
+    <key>SuccessfulExit</key>
+    <false/>
+  </dict>
+  <key>LimitLoadToSessionType</key>
+  <string>Aqua</string>
+  <key>ProcessType</key>
+  <string>Interactive</string>
+</dict>
+</plist>
