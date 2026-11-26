@@ -13,13 +13,7 @@
       forAllSystems = lib.genAttrs systems;
       hasDriver = system: lock.assets ? ${targets.${system}};
 
-      # The driver binary is not free software: allow it, and only it.
-      pkgsFor =
-        system:
-        import nixpkgs {
-          inherit system;
-          config.allowUnfreePredicate = pkg: lib.getName pkg == "sinden-driver";
-        };
+      pkgsFor = system: import nixpkgs { inherit system; };
     in
     {
       # Only the systems driver.lock has a binary for (none while it is the

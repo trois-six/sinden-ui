@@ -41,8 +41,8 @@ them from
 `https://github.com/trois-six/sinden-ui/releases/download/<tag>/<file>`
 and checks their SHA-256; a mismatch stops the build.
 
-The driver binaries are distributed under their own terms, not under this
-repository's MIT license: see [NOTICE](NOTICE).
+The driver binaries are MIT-licensed too, but their source code is not
+published: see [NOTICE](NOTICE).
 
 ## Layout
 
@@ -168,4 +168,5 @@ server: see [CONTRIBUTING.md](CONTRIBUTING.md).
 ## License
 
 MIT for this repository, see [LICENSE](LICENSE). The `sinden-driver`
-binaries have their own terms, see [NOTICE](NOTICE).
+binaries are MIT too, distributed without their source code, see
+[NOTICE](NOTICE).

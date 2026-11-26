@@ -27,12 +27,7 @@ let
       sha256 = lib.fakeSha256;
     };
   };
-  # The driver is unfree: allow it, and only it.
-  unfreePkgs = import nixpkgs {
-    inherit system;
-    config.allowUnfreePredicate = pkg: lib.getName pkg == "sinden-driver";
-  };
-  package = (unfreePkgs.callPackage ./package.nix { lock = fakeLock; }).overrideAttrs {
+  package = (pkgs.callPackage ./package.nix { lock = fakeLock; }).overrideAttrs {
     src = fakeDriver;
   };
 

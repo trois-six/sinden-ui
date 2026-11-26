@@ -50,7 +50,7 @@ stdenvNoCC.mkDerivation {
   meta = {
     description = "Driver service for the Sinden light gun";
     homepage = "https://github.com/trois-six/sinden-ui";
-    license = lib.licenses.unfree;
+    license = lib.licenses.mit;
     sourceProvenance = [ lib.sourceTypes.binaryNativeCode ];
     platforms = builtins.filter (s: lock.assets ? ${targets.${s}}) (builtins.attrNames targets);
     mainProgram = "sinden-driver";

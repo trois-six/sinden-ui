@@ -13,10 +13,9 @@ tree, published as an asset of this repository's `driver-v*` releases, and
 downloaded at build time by `scripts/fetch-driver` (pinned by version and
 SHA-256 in `driver.lock`).
 
-The `sinden-driver` binary is distributed under its own terms, which are
-not the MIT License of this repository. Redistributing it requires the
-terms that accompany its release. Until those terms are published with the
-release, all rights to the binary are reserved by its copyright holder.
+The `sinden-driver` binary is also licensed under the MIT License
+(Copyright (c) 2026 trois-six, the same terms as LICENSE): it may be used,
+copied and redistributed freely. Its source code is not published.
 
 Trademarks
 ----------

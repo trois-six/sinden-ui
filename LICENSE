@@ -22,6 +22,7 @@ SOFTWARE.
 
 ---
 
-This license covers the contents of this repository only. The `sinden-driver`
+This license covers the contents of this repository. The `sinden-driver`
 binaries that the build downloads (listed in `driver.lock`) are not part of
-this repository and are distributed under their own terms: see NOTICE.
+this repository; they are licensed under the MIT License too, without their
+source code: see NOTICE.

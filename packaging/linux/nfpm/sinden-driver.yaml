@@ -13,7 +13,7 @@ priority: optional
 maintainer: trois-six <trois-six@users.noreply.github.com>
 vendor: trois-six
 homepage: https://github.com/trois-six/sinden-ui
-license: LicenseRef-sinden-driver (see /usr/share/doc/sinden-driver/NOTICE)
+license: MIT
 description: |-
   Driver service for the Sinden light gun.
   Drives the guns (aim, buttons, recoil) as a systemd service; the guns

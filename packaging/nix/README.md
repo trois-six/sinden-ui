@@ -9,10 +9,8 @@
 | `checks.<system>.package` | builds `package.nix` from a stand-in binary implementing `service files` |
 | `checks.<system>.module`, `fallback` | evaluate the module with a stand-in package carrying the fallback files |
 
-The driver binary's license is not free: the flake's own package set allows
-`sinden-driver` (and only it) through `allowUnfreePredicate`. Using the
-module's default `package` therefore needs no `allowUnfree` in your
-configuration.
+The driver binary is MIT-licensed but distributed without its source
+(`sourceProvenance = binaryNativeCode`): no `allowUnfree` is needed.
 
 ```nix
 # flake.nix of a NixOS configuration
