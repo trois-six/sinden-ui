@@ -43,7 +43,7 @@ MinVersion=10.0
 OutputDir={#OutputDir}
 OutputBaseFilename=sinden-driver-{#DriverVersion}-setup-x86_64
 SetupIconFile=..\..\ui\src-tauri\icons\icon.ico
-UninstallDisplayIcon={app}\sinden-driver.exe
+UninstallDisplayIcon={app}\sinden-driver.ico
 UninstallDisplayName=Sinden Driver
 InfoBeforeFile=..\..\NOTICE
 Compression=lzma2
@@ -102,6 +102,7 @@ Name: "{commonappdata}\SindenDriver"
 Source: "{#DriverExe}"; DestDir: "{app}"; DestName: "sinden-driver.exe"; Components: driver; Flags: ignoreversion
 ; The configuration is the user's: installed once, kept on upgrade and uninstall.
 Source: "..\common\LightgunMono.exe.config"; DestDir: "{commonappdata}\SindenDriver"; Components: driver; Flags: onlyifdoesntexist uninsneveruninstall
+Source: "..\..\ui\src-tauri\icons\icon.ico"; DestDir: "{app}"; DestName: "sinden-driver.ico"; Flags: ignoreversion
 Source: "..\..\NOTICE"; DestDir: "{app}"; DestName: "NOTICE.txt"; Flags: ignoreversion
 Source: "..\..\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreversion
 #ifdef UiExe

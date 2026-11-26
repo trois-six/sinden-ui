@@ -9,6 +9,7 @@
 #   ui/src-tauri/icons/                       Tauri set (PNG, .ico, .icns) by `tauri icon`
 #   ui/src-tauri/icons/tray.png               Linux tray
 #   ui/src-tauri/icons/tray-template.png      macOS menu bar (22 pt @2x)
+#   ui/public/icon.svg                        the settings window's header
 #   packaging/linux/icons/hicolor/...         freedesktop icon theme sizes + scalable
 #
 # Renderer: rsvg-convert, inkscape or ImageMagick (`magick`), the first found.
@@ -41,6 +42,9 @@ for size in 16 22 24 32 48 64 128 256 512; do
 done
 mkdir -p "$hicolor/scalable/apps"
 cp assets/icon.svg "$hicolor/scalable/apps/sinden-driver-ui.svg"
+
+# The settings window's header.
+cp assets/icon.svg ui/public/icon.svg
 
 # Tray icons.
 icons=ui/src-tauri/icons
