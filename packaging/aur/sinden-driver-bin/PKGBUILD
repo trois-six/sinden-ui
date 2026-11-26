@@ -18,28 +18,24 @@ install=sinden-driver.install
 options=('!strip' '!debug')
 
 _release="https://github.com/trois-six/sinden-ui/releases/download/driver-v${pkgver}"
-source=('sinden-driver.service'
-        '60-sinden-driver.rules'
-        'sinden-driver.sysusers'
-        'LightgunMono.exe.config'
+source=('LightgunMono.exe.config'
         'NOTICE')
 source_x86_64=("sinden-driver-${pkgver}-x86_64::${_release}/sinden-driver-${pkgver}-x86_64-unknown-linux-musl")
 source_aarch64=("sinden-driver-${pkgver}-aarch64::${_release}/sinden-driver-${pkgver}-aarch64-unknown-linux-musl")
 source_armv7h=("sinden-driver-${pkgver}-armv7h::${_release}/sinden-driver-${pkgver}-armv7-unknown-linux-musleabihf")
 sha256sums=('SKIP'
-            'SKIP'
-            'SKIP'
-            'SKIP'
             'SKIP')
 sha256sums_x86_64=('SKIP')
 sha256sums_aarch64=('SKIP')
 sha256sums_armv7h=('SKIP')
 
 package() {
-  install -Dm755 "sinden-driver-${pkgver}-${CARCH}" "${pkgdir}/usr/bin/sinden-driver"
-  install -Dm644 sinden-driver.service "${pkgdir}/usr/lib/systemd/system/sinden-driver.service"
-  install -Dm644 60-sinden-driver.rules "${pkgdir}/usr/lib/udev/rules.d/60-sinden-driver.rules"
-  install -Dm644 sinden-driver.sysusers "${pkgdir}/usr/lib/sysusers.d/sinden-driver.conf"
+  local driver="sinden-driver-${pkgver}-${CARCH}"
+  install -Dm755 "${driver}" "${pkgdir}/usr/bin/sinden-driver"
+  # The systemd unit, udev rule, sysusers.d and tmpfiles.d entries, from the
+  # driver itself (under ${pkgdir}/usr/lib).
+  chmod +x "${driver}"
+  "./${driver}" service files --bin /usr/bin/sinden-driver --dir "${pkgdir}"
   install -Dm664 LightgunMono.exe.config "${pkgdir}/etc/sinden-driver/LightgunMono.exe.config"
   install -Dm644 NOTICE "${pkgdir}/usr/share/licenses/${pkgname}/NOTICE"
 }

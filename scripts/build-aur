@@ -31,10 +31,8 @@ ARCH_OF_TARGET = {
     "aarch64-unknown-linux-musl": "aarch64",
     "armv7-unknown-linux-musleabihf": "armv7h",
 }
+# The service files come from `sinden-driver service files` in package().
 DRIVER_FILES = {
-    "sinden-driver.service": ROOT / "packaging/linux/files/sinden-driver.service",
-    "60-sinden-driver.rules": ROOT / "packaging/linux/files/60-sinden-driver.rules",
-    "sinden-driver.sysusers": ROOT / "packaging/linux/files/sinden-driver.sysusers",
     "LightgunMono.exe.config": ROOT / "packaging/common/LightgunMono.exe.config",
     "NOTICE": ROOT / "NOTICE",
 }

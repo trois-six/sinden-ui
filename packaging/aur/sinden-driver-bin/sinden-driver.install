@@ -1,5 +1,9 @@
-# The user `sinden` exists once pacman's sysusers hook has run.
+# pacman's sysusers and tmpfiles hooks run after these functions: create the
+# user (member of group input) first, so that the configuration can be
+# given to it now.
 _own_config() {
+  systemd-sysusers
+  systemd-tmpfiles --create /usr/lib/tmpfiles.d/*sinden*.conf 2>/dev/null || true
   chown root:sinden etc/sinden-driver etc/sinden-driver/LightgunMono.exe.config
   chmod 0775 etc/sinden-driver
 }
