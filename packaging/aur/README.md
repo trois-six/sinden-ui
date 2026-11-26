@@ -30,8 +30,12 @@ cd aur-sinden-driver-bin && git add -A && git commit -m "Update to X.Y.Z" && git
 ```
 
 `package()` installs the systemd unit, udev rule, sysusers.d and
-tmpfiles.d entries by running the downloaded driver natively:
+tmpfiles.d entries and the hwdb by running the downloaded driver natively:
 `sinden-driver service files --bin /usr/bin/sinden-driver --dir "$pkgdir"`.
+
+pacman's own hooks then create the user, apply the tmpfiles.d entries,
+update the hwdb and reload udev (with `udevadm trigger -c change`), on
+install, upgrade and removal.
 
 Unlike the deb and rpm packages, `sinden-driver-bin` does not enable the
 service by itself (Arch's convention): `systemctl enable --now
