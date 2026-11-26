@@ -4,9 +4,10 @@
 
 | Output | What |
 |---|---|
-| `packages.<system>.sinden-driver` (and `default`) | the driver binary pinned in `driver.lock`, fetched with `fetchurl` and its SHA-256; static, nothing patched. Only for the systems the lock has a binary for: none while it is the placeholder |
-| `nixosModules.default` (`sinden-driver`) | `services.sinden-driver`: user `sinden`, systemd service, udev rule, configuration |
-| `checks.<system>.module` | evaluates the module with a stand-in binary |
+| `packages.<system>.sinden-driver` (and `default`) | the driver binary pinned in `driver.lock`, fetched with `fetchurl` and its SHA-256; static, nothing patched. On Linux, `lib/` holds the systemd unit, udev rule, sysusers.d and tmpfiles.d entries generated at build time by `sinden-driver service files` (hand-written fallbacks for cross builds). Only for the systems the lock has a binary for: none while it is the placeholder |
+| `nixosModules.default` (`sinden-driver`) | `services.sinden-driver`: the package's unit (enabled), udev rule and tmpfiles.d entries, user `sinden` in group `input`, configuration |
+| `checks.<system>.package` | builds `package.nix` from a stand-in binary implementing `service files` |
+| `checks.<system>.module`, `fallback` | evaluate the module with a stand-in package carrying the fallback files |
 
 The driver binary's license is not free: the flake's own package set allows
 `sinden-driver` (and only it) through `allowUnfreePredicate`. Using the
