@@ -294,25 +294,44 @@ export function buttonDefault(mode: ButtonMode, button: Button, slot: ButtonSlot
 
 // ---- Actions ---------------------------------------------------------------
 
+/** An action of the driver's ordered list of output codes. */
+export type Action = { code: number; label: MsgKey; arg?: string };
+
+const range = (first: number, count: number, label: MsgKey, arg: (i: number) => string): Action[] =>
+  Array.from({ length: count }, (_, i) => ({ code: first + i, label, arg: arg(i) }));
+const letter = (base: string) => (i: number) => String.fromCharCode(base.charCodeAt(0) + i);
+
 /**
- * Output codes with a known meaning (indexes into the driver's ordered list
- * of output codes). Other codes stay selectable by number.
+ * The output codes, as the comment of Sinden's LightgunMono.exe.config
+ * lists them (0 to 113). A value outside the list stays selectable by
+ * number.
  */
-export const KNOWN_ACTIONS: { code: number; label: MsgKey; arg?: string }[] = [
+export const KNOWN_ACTIONS: Action[] = [
+  { code: 0, label: "action.none" },
   { code: 1, label: "action.mouseLeft" },
   { code: 2, label: "action.mouseMiddle" },
   { code: 3, label: "action.mouseRight" },
-  { code: 9, label: "action.key", arg: "1" },
-  { code: 13, label: "action.key", arg: "5" },
+  { code: 4, label: "action.pauseMovement" },
+  { code: 5, label: "action.turboLeft" },
+  { code: 6, label: "action.turboReload" },
+  { code: 7, label: "action.altB" },
+  ...range(8, 10, "action.key", (i) => String(i)),
+  ...range(18, 26, "action.keyUpper", letter("A")),
+  ...range(44, 26, "action.key", letter("a")),
+  { code: 70, label: "action.return" },
+  { code: 71, label: "action.space" },
+  { code: 72, label: "action.escape" },
+  { code: 73, label: "action.tab" },
   { code: 74, label: "action.arrowUp" },
   { code: 75, label: "action.arrowDown" },
   { code: 76, label: "action.arrowLeft" },
   { code: 77, label: "action.arrowRight" },
-  ...Array.from({ length: 10 }, (_, i) => ({
-    code: 94 + i,
-    label: "action.joystickButton" as MsgKey,
-    arg: String(i + 1),
-  })),
+  { code: 78, label: "action.key", arg: "+" },
+  { code: 79, label: "action.key", arg: "," },
+  { code: 80, label: "action.key", arg: "-" },
+  { code: 81, label: "action.key", arg: "." },
+  ...range(82, 12, "action.functionKey", (i) => String(i + 1)),
+  ...range(94, 20, "action.joystickButton", (i) => String(i + 1)),
 ];
 
 /** Every field key of the schema (per-player keys without suffix). */

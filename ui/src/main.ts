@@ -422,6 +422,7 @@ function buttonCell(mode: ButtonMode, button: (typeof BUTTONS)[number], slot: Bu
   const change = bind(cell, key, shown, validCode);
   const number = h("input", { type: "number", min: 0, max: 255, value, class: "code", "aria-label": key });
   if (slot === "mod" || slot === "offscreenMod") {
+    cell.title = `${t("buttons.modifierHelp")}\n${cell.title}`;
     number.addEventListener("input", () => change(number.value));
     cell.append(number);
     return cell;

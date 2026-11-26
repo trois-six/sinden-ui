@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { bgrToHex, Draft, effectiveValue, hexToBgr, isValid, playerKey } from "./config.ts";
-import { allKeys, buttonDefault, buttonKey, PLAYER_SECTIONS } from "./schema.ts";
+import { allKeys, buttonDefault, buttonKey, KNOWN_ACTIONS, PLAYER_SECTIONS } from "./schema.ts";
 
 test("player keys", () => {
   assert.equal(playerKey("LeftHanded", 1), "LeftHanded");
@@ -69,4 +69,20 @@ test("every key is unique", () => {
   assert.equal(new Set(keys).size, keys.length);
   assert.ok(keys.includes("LeftHanded"));
   assert.equal(player.length, PLAYER_SECTIONS.flatMap((s) => s.fields).length + 2 * 10 * 4);
+});
+
+test("the action list covers 0 to 113 once, in order", () => {
+  assert.deepEqual(
+    KNOWN_ACTIONS.map((a) => a.code),
+    Array.from({ length: 114 }, (_, i) => i),
+  );
+  const at = (code: number) => KNOWN_ACTIONS[code];
+  assert.deepEqual([at(8).arg, at(17).arg], ["0", "9"]);
+  assert.deepEqual([at(18).arg, at(43).arg, at(44).arg, at(69).arg], ["A", "Z", "a", "z"]);
+  assert.deepEqual([at(82).arg, at(93).arg], ["1", "12"]);
+  assert.deepEqual([at(94).arg, at(113).arg], ["1", "20"]);
+  // The documented defaults name what the configuration reference says.
+  assert.equal(at(9).arg, "1");
+  assert.equal(at(13).arg, "5");
+  assert.equal(at(76).label, "action.arrowLeft");
 });
