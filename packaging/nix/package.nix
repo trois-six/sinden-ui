@@ -1,6 +1,6 @@
 # The sinden-driver binary of the release pinned in driver.lock. It is
 # static (musl on Linux), so nothing is patched. On Linux, its systemd
-# unit, udev rule, sysusers.d and tmpfiles.d entries come from
+# unit, udev rule, hwdb, sysusers.d and tmpfiles.d entries come from
 # `sinden-driver service files` (hand-written fallbacks when the build
 # platform cannot run the binary), under $out/lib for the NixOS module.
 {
