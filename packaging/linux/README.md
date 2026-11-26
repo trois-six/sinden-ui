@@ -26,8 +26,10 @@ service read every keyboard); the udev rule gives it the gun's serial port
 (with `ID_MM_DEVICE_IGNORE=1`, so that ModemManager leaves it alone) and
 camera; the hwdb entry (`EVDEV_ABS_00/01=:::0:0` for the guns' vendors and
 products) clears the joystick axes' kernel filter, so the service never
-opens the gun's input nodes; `/etc/sinden-driver` belongs to `sinden`
-(0755, the file 0644).
+opens the gun's input nodes; `/etc/sinden-driver` is `root:sinden` 0775
+and its file `sinden:sinden` 0644 (a directory owned by `sinden` over a
+file still root's would be an unsafe path transition for
+systemd-tmpfiles).
 
 `files/` holds hand-written **fallbacks** of those five files, used only
 with stub binaries (`fetch-driver --stub`), when no binary runs on the

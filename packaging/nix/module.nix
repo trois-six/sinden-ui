@@ -31,7 +31,7 @@ let
   # Runs as root ("+") before the service: outside its sandbox, whatever
   # the driver's unit allows.
   seedConfig = pkgs.writeShellScript "sinden-driver-seed-config" ''
-    install -d -m 0755 -o sinden -g sinden ${configDir}
+    install -d -m 0775 -o root -g sinden ${configDir}
     if ${lib.boolToString cfg.overwriteConfig} || [ ! -e ${configFile} ]; then
       install -m 0644 -o sinden -g sinden ${initialConfig} ${configFile}
     fi

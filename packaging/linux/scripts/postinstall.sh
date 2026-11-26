@@ -19,8 +19,12 @@ if [ "$1" = "configure" ] || [ "$1" = "1" ] || [ "$1" = "2" ] || [ -z "$1" ]; th
 			if [ -e "$f" ]; then systemd-tmpfiles --create "$f" || true; fi
 		done
 	fi
-	chown sinden:sinden /etc/sinden-driver /etc/sinden-driver/LightgunMono.exe.config
-	chmod 0755 /etc/sinden-driver
+	# The directory stays root's, writable by the group (a directory owned
+	# by sinden over a file still root's is an unsafe path transition, which
+	# systemd-tmpfiles refuses); the file is the service's.
+	chown root:sinden /etc/sinden-driver
+	chmod 0775 /etc/sinden-driver
+	chown sinden:sinden /etc/sinden-driver/LightgunMono.exe.config
 	chmod 0644 /etc/sinden-driver/LightgunMono.exe.config
 
 	# The guns already plugged get the new permissions (udev rule) and their

@@ -5,8 +5,9 @@
 # to it now.
 _own_config() {
   systemd-sysusers
-  chown sinden:sinden etc/sinden-driver etc/sinden-driver/LightgunMono.exe.config
-  chmod 0755 etc/sinden-driver
+  chown root:sinden etc/sinden-driver
+  chmod 0775 etc/sinden-driver
+  chown sinden:sinden etc/sinden-driver/LightgunMono.exe.config
   chmod 0644 etc/sinden-driver/LightgunMono.exe.config
 }
 

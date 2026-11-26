@@ -31,12 +31,13 @@ contents:
   # copies in packaging/linux/files), inserted by build-linux-packages.
   # @SERVICE_FILES@
 
-  # The service rewrites the file (set_config): the directory and the file
-  # belong to the user `sinden` (tmpfiles.d and postinstall, once it exists).
+  # The service rewrites the file (set_config): the directory is root's,
+  # writable by the group `sinden`, the file the user's (tmpfiles.d and
+  # postinstall, once they exist).
   - dst: /etc/sinden-driver
     type: dir
     file_info:
-      mode: 0755
+      mode: 0775
   - src: packaging/common/LightgunMono.exe.config
     dst: /etc/sinden-driver/LightgunMono.exe.config
     type: config|noreplace
