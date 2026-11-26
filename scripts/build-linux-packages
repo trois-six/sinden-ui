@@ -9,6 +9,12 @@ sinden-driver is built for every Linux target found in dist/driver/ (run
 scripts/fetch-driver first, or fetch-driver --stub); sinden-driver-ui only
 when --ui names the UI binary. nfpm is taken from the PATH or installed
 with `go install` into .tools/ (pinned version).
+
+The systemd unit, udev rule, sysusers.d and tmpfiles.d entries come from
+`sinden-driver service files --bin /usr/bin/sinden-driver`, run once with
+the binary of the build host's architecture (they are the same for every
+architecture). With stub binaries, or without a binary the host can run,
+the hand-written fallbacks of packaging/linux/files are used instead.
 """
 
 from __future__ import annotations
@@ -32,6 +38,20 @@ LINUX_TARGETS = {
     "armv7-unknown-linux-musleabihf": "arm7",
 }
 HOST_ARCH = {"x86_64": "amd64", "amd64": "amd64", "aarch64": "arm64", "arm64": "arm64"}
+HOST_TARGET = {
+    "x86_64": "x86_64-unknown-linux-musl",
+    "amd64": "x86_64-unknown-linux-musl",
+    "aarch64": "aarch64-unknown-linux-musl",
+    "arm64": "aarch64-unknown-linux-musl",
+}
+# Hand-written fallback -> installed path (relative to /).
+FALLBACK_SERVICE_FILES = {
+    "packaging/linux/files/sinden-driver.service": "usr/lib/systemd/system/sinden-driver.service",
+    "packaging/linux/files/60-sinden-driver.rules": "usr/lib/udev/rules.d/60-sinden-driver.rules",
+    "packaging/linux/files/sinden-driver.sysusers": "usr/lib/sysusers.d/sinden-driver.conf",
+    "packaging/linux/files/sinden-driver.tmpfiles": "usr/lib/tmpfiles.d/sinden-driver.conf",
+}
+SERVICE_FILES_MARKER = "  # @SERVICE_FILES@\n"
 
 
 def fail(message: str) -> None:
@@ -76,6 +96,56 @@ def stage(binary: Path, name: str) -> None:
     dest.chmod(0o755)
 
 
+def service_files(driver_dir: Path, force_fallback: bool) -> Path:
+    """Writes the service files into dist/stage/service-files/ (a tree under /)."""
+    tree = ROOT / "dist" / "stage" / "service-files"
+    shutil.rmtree(tree, ignore_errors=True)
+    tree.mkdir(parents=True)
+    target = HOST_TARGET.get(platform.machine().lower())
+    binary = driver_dir / target / "sinden-driver" if target else None
+    reason = None
+    if force_fallback:
+        reason = "--fallback-service-files"
+    elif (driver_dir / "STUB").exists():
+        reason = "stub binaries"
+    elif platform.system() != "Linux" or binary is None or not binary.is_file():
+        reason = "no driver binary this host can run"
+    if reason:
+        print(f"warning: {reason}: using the hand-written service files of packaging/linux/files", file=sys.stderr)
+        for source, installed in FALLBACK_SERVICE_FILES.items():
+            dest = tree / installed
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(ROOT / source, dest)
+        return tree
+    binary.chmod(0o755)  # artifacts lose the executable bit
+    command = [str(binary), "service", "files", "--bin", "/usr/bin/sinden-driver", "--dir", str(tree)]
+    print("+ " + " ".join(command))
+    if subprocess.run(command, check=False).returncode != 0:
+        fail("sinden-driver service files failed")
+    if not any(p.is_file() for p in tree.rglob("*")):
+        fail("sinden-driver service files wrote nothing")
+    return tree
+
+
+def render_driver_config(tree: Path) -> str:
+    """The nfpm config of sinden-driver with one entry per service file."""
+    template = (ROOT / "packaging/linux/nfpm/sinden-driver.yaml").read_text(encoding="utf-8")
+    if SERVICE_FILES_MARKER not in template:
+        fail("the @SERVICE_FILES@ marker is missing from packaging/linux/nfpm/sinden-driver.yaml")
+    entries = []
+    for path in sorted(p for p in tree.rglob("*") if p.is_file()):
+        entries.append(
+            f"  - src: {path.relative_to(ROOT).as_posix()}\n"
+            f"    dst: /{path.relative_to(tree).as_posix()}\n"
+            "    file_info:\n"
+            "      mode: 0644\n"
+        )
+        print(f"service file: /{path.relative_to(tree).as_posix()}")
+    config = ROOT / "dist" / "stage" / "sinden-driver.yaml"
+    config.write_text(template.replace(SERVICE_FILES_MARKER, "".join(entries)), encoding="utf-8")
+    return config.relative_to(ROOT).as_posix()
+
+
 def nfpm_package(nfpm: str, config: str, fmt: str, out: Path, env: dict[str, str]) -> None:
     out.mkdir(parents=True, exist_ok=True)
     result = subprocess.run(
@@ -98,6 +168,10 @@ def main() -> None:
     parser.add_argument("--driver-dir", type=Path, default=ROOT / "dist" / "driver")
     parser.add_argument("--out", type=Path, default=ROOT / "dist" / "packages")
     parser.add_argument("--skip-driver", action="store_true", help="only build sinden-driver-ui")
+    parser.add_argument(
+        "--fallback-service-files", action="store_true",
+        help="package the hand-written service files instead of the driver's",
+    )
     args = parser.parse_args()
 
     formats = args.formats or ["deb", "rpm"]
@@ -109,6 +183,7 @@ def main() -> None:
         if not targets:
             fail(f"no Linux driver binary in {args.driver_dir} (run scripts/fetch-driver or fetch-driver --stub)")
         version = driver_version(args.driver_dir)
+        config = render_driver_config(service_files(args.driver_dir, args.fallback_service_files))
         for target in targets:
             binary = (args.driver_dir / target / "sinden-driver").resolve()
             if not binary.is_file():
@@ -118,7 +193,7 @@ def main() -> None:
                 print(f"sinden-driver {version} {target} {fmt}")
                 nfpm_package(
                     nfpm,
-                    "packaging/linux/nfpm/sinden-driver.yaml",
+                    config,
                     fmt,
                     out,
                     {

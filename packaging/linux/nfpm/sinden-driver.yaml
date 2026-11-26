@@ -1,7 +1,8 @@
 # nfpm: the sinden-driver package (deb, rpm).
-# Built by scripts/build-linux-packages from the repository root, which sets
-# NFPM_ARCH, SINDEN_DRIVER_VERSION and SINDEN_PKG_RELEASE and stages the
-# target's binary as dist/stage/sinden-driver.
+# A template: scripts/build-linux-packages renders it into dist/stage/ and
+# runs nfpm from the repository root with NFPM_ARCH, SINDEN_DRIVER_VERSION
+# and SINDEN_PKG_RELEASE set and the target's binary staged as
+# dist/stage/sinden-driver.
 name: sinden-driver
 arch: ${NFPM_ARCH}
 platform: linux
@@ -25,22 +26,14 @@ contents:
     file_info:
       mode: 0755
 
-  # Regenerate these three from `sinden-driver service print-files`.
-  - src: packaging/linux/files/sinden-driver.service
-    dst: /usr/lib/systemd/system/sinden-driver.service
-    file_info:
-      mode: 0644
-  - src: packaging/linux/files/60-sinden-driver.rules
-    dst: /usr/lib/udev/rules.d/60-sinden-driver.rules
-    file_info:
-      mode: 0644
-  - src: packaging/linux/files/sinden-driver.sysusers
-    dst: /usr/lib/sysusers.d/sinden-driver.conf
-    file_info:
-      mode: 0644
+  # The systemd unit, udev rule, sysusers.d and tmpfiles.d entries: one
+  # entry per file of `sinden-driver service files` (or of the fallback
+  # copies in packaging/linux/files), inserted by build-linux-packages.
+  # @SERVICE_FILES@
 
   # The driver rewrites the file (set_config): the directory and the file
-  # belong to the group `sinden` (set by postinstall, once the user exists).
+  # belong to the group `sinden` (tmpfiles.d and postinstall, once the user
+  # exists).
   - dst: /etc/sinden-driver
     type: dir
     file_info:

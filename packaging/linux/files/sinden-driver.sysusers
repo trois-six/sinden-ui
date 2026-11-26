@@ -1,3 +1,5 @@
-# sinden-driver system user (sysusers.d(5)).
-# To be REGENERATED from `sinden-driver service print-files`.
+# sinden-driver system user (sysusers.d(5)): FALLBACK copy (see
+# sinden-driver.service). Group input: to clear the joystick axes' kernel
+# filter on the gun's input nodes.
 u sinden - "Sinden light gun driver" /var/empty -
+m sinden input

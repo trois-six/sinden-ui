@@ -1,0 +1,4 @@
+# sinden-driver tmpfiles.d(5): FALLBACK copy (see sinden-driver.service).
+# The driver rewrites its configuration (set_config).
+d /etc/sinden-driver 0775 root sinden -
+z /etc/sinden-driver/LightgunMono.exe.config 0664 root sinden -

@@ -1,7 +1,8 @@
-# sinden-driver systemd unit.
+# sinden-driver systemd unit: FALLBACK copy.
 #
-# Written by hand from the driver's service plan; to be REGENERATED from
-# `sinden-driver service print-files` once the driver provides it.
+# Packages install the unit that `sinden-driver service files` generates
+# from the downloaded driver; this hand-written copy is used only when that
+# is impossible (stub binaries, no binary runnable on the build host).
 [Unit]
 Description=Sinden light gun driver
 Documentation=https://github.com/trois-six/sinden-ui
@@ -18,8 +19,9 @@ ExecStart=/usr/bin/sinden-driver service run
 Restart=on-failure
 RestartSec=2
 
-# The guns' serial ports, cameras and input nodes are opened through the
-# group the udev rule gives them; set_config rewrites the configuration.
+# The gun's serial port and camera are in group sinden (udev rule), its
+# input nodes in group input (sysusers.d); set_config rewrites the
+# configuration.
 NoNewPrivileges=yes
 ProtectSystem=strict
 ReadWritePaths=/etc/sinden-driver
