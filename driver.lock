@@ -1,5 +1,12 @@
 {
-  "version": "0.0.0",
-  "tag": "",
-  "assets": {}
+  "version": "0.2.0",
+  "tag": "driver-v0.2.0",
+  "assets": {
+    "x86_64-unknown-linux-musl": { "file": "sinden-driver-0.2.0-x86_64-unknown-linux-musl", "sha256": "4be62d299e83c1ff317a475af00f18be0232140e1f38e6ca428d1f3c6e9ea4fa" },
+    "aarch64-unknown-linux-musl": { "file": "sinden-driver-0.2.0-aarch64-unknown-linux-musl", "sha256": "18a883dcbf75966b38ffe7fc568f8b4a3fb614a6a9a0bd78659ced301a4173b6" },
+    "armv7-unknown-linux-musleabihf": { "file": "sinden-driver-0.2.0-armv7-unknown-linux-musleabihf", "sha256": "064b6bec2829269af2f9e4e21f696e7b16a18f7655a2e8bfe608265a47c2ad55" },
+    "armv7-unknown-linux-musleabihf-cortex-a9": { "file": "sinden-driver-0.2.0-armv7-unknown-linux-musleabihf-cortex-a9", "sha256": "a51eacdfde887451301cd5201c1641d6cd64c96dc9102a30bb021dfa3f9d6959" },
+    "x86_64-pc-windows-msvc": { "file": "sinden-driver-0.2.0-x86_64-pc-windows-msvc.exe", "sha256": "c6c29c766c2a903c151a1c65fa832dee2e4beb6a67d8f893b890b7435ed50522" },
+    "universal-apple-darwin": { "file": "sinden-driver-0.2.0-universal-apple-darwin", "sha256": "4376dbe73bd0e94b14b61bcfaa9457b306ff2269b98cfbefcb4d7c39f29a2e18" }
+  }
 }
