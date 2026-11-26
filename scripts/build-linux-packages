@@ -10,7 +10,7 @@ scripts/fetch-driver first, or fetch-driver --stub); sinden-driver-ui only
 when --ui names the UI binary. nfpm is taken from the PATH or installed
 with `go install` into .tools/ (pinned version).
 
-The systemd unit, udev rule, sysusers.d and tmpfiles.d entries come from
+The systemd unit, udev rule, hwdb, sysusers.d and tmpfiles.d entries come from
 `sinden-driver service files --bin /usr/bin/sinden-driver`, run once with
 the binary of the build host's architecture (they are the same for every
 architecture). With stub binaries, or without a binary the host can run,
@@ -50,6 +50,7 @@ FALLBACK_SERVICE_FILES = {
     "packaging/linux/files/60-sinden-driver.rules": "usr/lib/udev/rules.d/60-sinden-driver.rules",
     "packaging/linux/files/sinden-driver.sysusers": "usr/lib/sysusers.d/sinden-driver.conf",
     "packaging/linux/files/sinden-driver.tmpfiles": "usr/lib/tmpfiles.d/sinden-driver.conf",
+    "packaging/linux/files/sinden-driver.hwdb": "usr/lib/udev/hwdb.d/60-sinden-driver.hwdb",
 }
 SERVICE_FILES_MARKER = "  # @SERVICE_FILES@\n"
 

@@ -19,9 +19,9 @@ ExecStart=/usr/bin/sinden-driver service run
 Restart=on-failure
 RestartSec=2
 
-# The gun's serial port and camera are in group sinden (udev rule), its
-# input nodes in group input (sysusers.d); set_config rewrites the
-# configuration.
+# The gun's serial port and camera are in group sinden (udev rule); the
+# hwdb clears its axes' kernel filter, so the service never opens its input
+# nodes. set_config rewrites the configuration.
 NoNewPrivileges=yes
 ProtectSystem=strict
 ReadWritePaths=/etc/sinden-driver

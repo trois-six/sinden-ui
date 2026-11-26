@@ -94,7 +94,7 @@ scripts/build-linux-packages --ui target/release/sinden-driver-ui
 ```
 
 Packages land in `dist/packages/`. The systemd unit, udev rule,
-sysusers.d and tmpfiles.d entries come from the driver itself
+hwdb, sysusers.d and tmpfiles.d entries come from the driver itself
 (`sinden-driver service files`, run with the build host's binary); stub
 builds use the fallbacks of `packaging/linux/files/`. The script uses
 [nfpm](https://nfpm.goreleaser.com/); if it is not on the `PATH` it is

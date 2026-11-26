@@ -1,18 +1,19 @@
-# pacman's sysusers and tmpfiles hooks run after these functions: create the
-# user (member of group input) first, so that the configuration can be
-# given to it now.
+# pacman's hooks do the rest after these functions: sysusers (20),
+# tmpfiles (21), hwdb update (25, the guns' axes' filter) and udev reload
+# with `udevadm trigger -c change` (35), on install, upgrade and removal.
+# The user is created here already, so that the configuration can be given
+# to it now.
 _own_config() {
   systemd-sysusers
-  systemd-tmpfiles --create /usr/lib/tmpfiles.d/*sinden*.conf 2>/dev/null || true
-  chown root:sinden etc/sinden-driver etc/sinden-driver/LightgunMono.exe.config
-  chmod 0775 etc/sinden-driver
+  chown sinden:sinden etc/sinden-driver etc/sinden-driver/LightgunMono.exe.config
+  chmod 0755 etc/sinden-driver
+  chmod 0644 etc/sinden-driver/LightgunMono.exe.config
 }
 
 post_install() {
   _own_config
   echo ">>> Start the driver now and at boot:"
   echo ">>>   systemctl enable --now sinden-driver.service"
-  echo ">>> Replug the guns (or run 'udevadm trigger') so that the udev rule applies."
 }
 
 post_upgrade() {

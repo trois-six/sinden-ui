@@ -8,8 +8,13 @@ remove | purge | 0)
 	if [ -d /run/systemd/system ]; then
 		systemctl daemon-reload || true
 	fi
+	# Without the hwdb entry, the guns' axes get the kernel's filter back.
+	if command -v systemd-hwdb >/dev/null 2>&1; then
+		systemd-hwdb update || true
+	fi
 	if command -v udevadm >/dev/null 2>&1; then
-		udevadm control --reload-rules || true
+		udevadm control --reload || true
+		udevadm trigger --action=change --subsystem-match=input || true
 	fi
 	;;
 esac

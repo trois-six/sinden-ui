@@ -8,7 +8,8 @@ SUBSYSTEMS=="usb", ATTRS{idVendor}=="16d0", ATTRS{idProduct}=="1097|1098", GOTO=
 GOTO="sinden_end"
 
 LABEL="sinden_match"
-SUBSYSTEM=="tty", GROUP="sinden", MODE="0660"
+# ModemManager must not probe the gun's serial port (AT commands).
+SUBSYSTEM=="tty", GROUP="sinden", MODE="0660", ENV{ID_MM_DEVICE_IGNORE}="1"
 SUBSYSTEM=="video4linux", GROUP="sinden", MODE="0660"
 
 LABEL="sinden_end"

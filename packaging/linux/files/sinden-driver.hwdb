@@ -1,0 +1,14 @@
+# sinden-driver hwdb(7): FALLBACK copy (see sinden-driver.service).
+# Clears the kernel's fuzz and flat on the guns' X/Y axes (applied by
+# systemd's 60-evdev.rules when their input nodes appear).
+
+evdev:input:b0003v16C0p0F01*
+evdev:input:b0003v16C0p0F02*
+evdev:input:b0003v16C0p0F38*
+evdev:input:b0003v16C0p0F39*
+evdev:input:b0003v16D0p0F01*
+evdev:input:b0003v16D0p0F02*
+evdev:input:b0003v16D0p0F38*
+evdev:input:b0003v16D0p0F39*
+ EVDEV_ABS_00=:::0:0
+ EVDEV_ABS_01=:::0:0

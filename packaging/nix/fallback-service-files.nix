@@ -8,4 +8,5 @@
   install -Dm644 ${../linux/files/60-sinden-driver.rules} "$out/lib/udev/rules.d/60-sinden-driver.rules"
   install -Dm644 ${../linux/files/sinden-driver.sysusers} "$out/lib/sysusers.d/sinden-driver.conf"
   install -Dm644 ${../linux/files/sinden-driver.tmpfiles} "$out/lib/tmpfiles.d/sinden-driver.conf"
+  install -Dm644 ${../linux/files/sinden-driver.hwdb} "$out/lib/udev/hwdb.d/60-sinden-driver.hwdb"
 ''

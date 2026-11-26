@@ -32,10 +32,10 @@ sha256sums_armv7h=('SKIP')
 package() {
   local driver="sinden-driver-${pkgver}-${CARCH}"
   install -Dm755 "${driver}" "${pkgdir}/usr/bin/sinden-driver"
-  # The systemd unit, udev rule, sysusers.d and tmpfiles.d entries, from the
+  # The systemd unit, udev rule, hwdb, sysusers.d and tmpfiles.d entries, from the
   # driver itself (under ${pkgdir}/usr/lib).
   chmod +x "${driver}"
   "./${driver}" service files --bin /usr/bin/sinden-driver --dir "${pkgdir}"
-  install -Dm664 LightgunMono.exe.config "${pkgdir}/etc/sinden-driver/LightgunMono.exe.config"
+  install -Dm644 LightgunMono.exe.config "${pkgdir}/etc/sinden-driver/LightgunMono.exe.config"
   install -Dm644 NOTICE "${pkgdir}/usr/share/licenses/${pkgname}/NOTICE"
 }

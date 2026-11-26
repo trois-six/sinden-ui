@@ -1,5 +1,4 @@
 # sinden-driver system user (sysusers.d(5)): FALLBACK copy (see
-# sinden-driver.service). Group input: to clear the joystick axes' kernel
-# filter on the gun's input nodes.
+# sinden-driver.service). In its own group only: not in input, which would
+# let the service read every keyboard.
 u sinden - "Sinden light gun driver" /var/empty -
-m sinden input
