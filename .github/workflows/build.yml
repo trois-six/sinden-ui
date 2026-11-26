@@ -303,5 +303,5 @@ jobs:
           (cd release && sha256sum -- * > SHA256SUMS)
           driver_version=$(python3 -c 'import json; print(json.load(open("driver.lock"))["version"])')
           gh release create "$GITHUB_REF_NAME" --verify-tag --title "sinden-ui $GITHUB_REF_NAME" \
-            --notes "Packages of sinden-driver $driver_version and sinden-driver-ui ${GITHUB_REF_NAME#v}. The sinden-driver binaries are distributed under their own terms: see NOTICE." \
+            --notes "Packages of sinden-driver $driver_version and sinden-driver-ui ${GITHUB_REF_NAME#v}. The sinden-driver binaries are MIT-licensed, without their source: see NOTICE." \
             release/*
