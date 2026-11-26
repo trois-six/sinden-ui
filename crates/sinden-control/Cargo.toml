@@ -1,0 +1,17 @@
+[package]
+name = "sinden-control"
+version = "0.1.0"
+description = "Client of the sinden-driver control API (JSON lines over a local socket or named pipe)"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true
