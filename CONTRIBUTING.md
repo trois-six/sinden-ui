@@ -1,0 +1,61 @@
+# Contributing
+
+Thank you for helping. This repository is public; the driver's source is
+not. Everything here must build and be testable without it.
+
+## Ground rules
+
+* English for code, documentation and commit messages.
+* [Conventional Commits](https://www.conventionalcommits.org/):
+  `feat(ui): ...`, `fix(packaging): ...`, `ci: ...`, `docs: ...`.
+  Small commits, one logical change each.
+* Never commit a driver binary (or any build output). The driver reaches
+  the packages only through `driver.lock` and `scripts/fetch-driver`.
+* Never copy code or assets from Sinden's official software: its license
+  forbids it. The icon in `assets/` is original.
+* GitHub Actions are pinned by commit SHA.
+
+## Working without the driver
+
+| You want to | Do |
+|---|---|
+| build packages | `scripts/fetch-driver --stub`, then the build scripts: the packages contain a placeholder `sinden-driver` that only prints a message |
+| test the real driver | `scripts/fetch-driver` downloads the binaries of the release pinned in `driver.lock` |
+| develop the UI | run the fake control server below and point the UI at it |
+
+### Fake control server
+
+`crates/sinden-control` contains the API client and, in its tests, a fake
+server speaking the control protocol (one JSON object per line). To run
+the UI against a socket of your own:
+
+```sh
+export SINDEN_DRIVER_SOCKET="$PWD/target/fake.sock"
+cargo run -p sinden-control --example fake-server &    # serves $SINDEN_DRIVER_SOCKET
+cargo run -p sinden-control --example sinden-ctl -- status
+cd ui && npm run tauri dev
+```
+
+`SINDEN_DRIVER_SOCKET` overrides the endpoint (a socket path on Linux and
+macOS, a pipe name such as `\\.\pipe\sinden-driver-dev` on Windows).
+
+## Checks
+
+```sh
+python3 -m unittest discover -s scripts/tests -v
+cargo fmt --all --check
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
+(cd ui && npm ci && npm run check && npm test)
+shellcheck packaging/linux/scripts/*.sh packaging/macos/*.sh packaging/macos/scripts/*/*
+nix flake check                                          # if Nix is installed
+```
+
+CI runs the same checks.
+
+## Files generated from the driver
+
+The systemd unit, the udev rule and the sysusers.d entry in
+`packaging/linux/files/` are written by hand for now. Once the driver
+provides `sinden-driver service print-files`, they are regenerated from
+its output; keep the "regenerate" header in them until then.

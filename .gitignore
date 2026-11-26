@@ -1,0 +1,26 @@
+# Build outputs
+/target/
+/dist/
+/ui/dist/
+/ui/node_modules/
+/ui/src-tauri/gen/schemas/
+
+# Local tools (nfpm, ...) installed by the build scripts
+/.tools/
+
+# Python
+__pycache__/
+*.pyc
+
+# Editors and OS
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Local agent settings
+/.claude/
+
+# Nix
+/result
+/result-*
