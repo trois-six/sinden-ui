@@ -96,6 +96,9 @@ mod tests {
     fn gun(state: GunState) -> Gun {
         Gun {
             player: 1,
+            device: r"USB\VID_16C0&PID_0F01\1".into(),
+            vendor: Some(0x16c0),
+            product: Some(0x0f01),
             port: "COM3".into(),
             camera: String::new(),
             firmware: "1.9".into(),

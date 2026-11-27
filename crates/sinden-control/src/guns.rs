@@ -26,7 +26,8 @@ impl Guns {
                 self.0.retain(|g| g.player != gun.player);
                 self.0.len() != before
             }
-            Event::Other(_) => false,
+            // A firmware update shows through the gun's own events.
+            Event::Firmware(_) | Event::Other(_) => false,
         }
     }
 
@@ -59,6 +60,9 @@ mod tests {
     fn gun(player: u8, state: GunState) -> Gun {
         Gun {
             player,
+            device: format!("/sys/devices/x/1-1.{player}"),
+            vendor: Some(0x16c0),
+            product: Some(0x0f01),
             port: format!("/dev/ttyACM{player}"),
             camera: String::new(),
             firmware: "1.9".into(),

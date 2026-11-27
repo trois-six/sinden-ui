@@ -16,6 +16,14 @@ pub enum Error {
     /// The driver answered something the protocol does not allow.
     #[error("protocol error: {0}")]
     Protocol(String),
+    /// A request longer than the driver accepts (a line of 1 MiB).
+    #[error("the request is {size} bytes, more than the driver's {limit}")]
+    RequestTooLarge {
+        /// The request line's length.
+        size: usize,
+        /// [`crate::MAX_REQUEST_LINE`].
+        limit: usize,
+    },
     /// The driver answered the request with an error.
     #[error("the driver refused the request: {0}")]
     Service(String),

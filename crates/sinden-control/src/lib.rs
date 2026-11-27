@@ -13,8 +13,14 @@
 //! `subscribe` answers with the current status (`{"guns": [...]}`); after
 //! it, that connection only carries events, one per line, without `id`:
 //! `{"event": "gun_added" | "gun_removed" | "state", "gun": {...}}` (the
-//! driver coalesces them into differences between snapshots). Other
-//! requests go over another connection.
+//! driver coalesces them into differences between snapshots), and a
+//! firmware update's `{"event": "firmware", "device": ..., "phase": ...,
+//! "progress": ..., "error": ...}`. Other requests go over another
+//! connection.
+//!
+//! `firmware_update` sends a firmware file of Sinden's to a gun; the
+//! [`firmware`] module checks the file and tells which gun it is for
+//! first.
 //!
 //! ```no_run
 //! use sinden_control::{Client, Endpoint};
@@ -31,14 +37,19 @@ mod endpoint;
 mod error;
 #[cfg(unix)]
 pub mod fake;
+pub mod firmware;
 mod guns;
 mod types;
 
-pub use client::{Client, Subscription};
+pub use client::{Client, MAX_REQUEST_LINE, Subscription};
 pub use endpoint::{ENDPOINT_ENV, Endpoint};
 pub use error::Error;
+pub use firmware::{GunColour, UsbId};
 pub use guns::Guns;
-pub use types::{ConfigSnapshot, Event, Gun, GunState, Status, VersionInfo};
+pub use types::{
+    ConfigSnapshot, Event, FirmwarePhase, FirmwareProgress, FirmwareStarted, FirmwareTarget, Gun,
+    GunState, Status, VersionInfo,
+};
 
 /// The control API version this client speaks.
 pub const API_VERSION: u32 = 1;

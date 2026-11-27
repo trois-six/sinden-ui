@@ -6,11 +6,16 @@ use std::time::Duration;
 use serde::de::DeserializeOwned;
 use serde_json::{Map, Value, json};
 
-use crate::types::RawEvent;
-use crate::{ConfigSnapshot, Endpoint, Error, Event, Result, Status, VersionInfo};
+use crate::{
+    ConfigSnapshot, Endpoint, Error, Event, FirmwareStarted, FirmwareTarget, Result, Status,
+    VersionInfo,
+};
 
 /// How long a request waits for its response by default.
 pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// The longest request line the driver reads, its line feed included.
+pub const MAX_REQUEST_LINE: usize = 1 << 20;
 
 /// A connection to the driver's control API.
 ///
@@ -97,6 +102,24 @@ impl Client {
         self.call("set_config", &json!({ "values": values }))
     }
 
+    /// `firmware_update`: writes the firmware file `hex` (its Intel HEX
+    /// text) to a gun. `force` writes a file whose USB identifiers are not
+    /// the gun's (another colour). The driver answers once the update
+    /// started; its progress then comes as [`Event::Firmware`] on a
+    /// subscription (subscribe first), and the gun leaves the status
+    /// (`gun_removed`) until it is back (`gun_added`).
+    pub fn firmware_update(
+        &mut self,
+        target: &FirmwareTarget,
+        hex: &str,
+        force: bool,
+    ) -> Result<FirmwareStarted> {
+        self.call(
+            "firmware_update",
+            &firmware_update_params(target, hex, force),
+        )
+    }
+
     /// `subscribe`: returns the current status and turns this connection
     /// into a stream of events. Other requests need another connection.
     ///
@@ -117,10 +140,25 @@ impl Client {
         let mut line =
             serde_json::to_vec(&json!({ "id": id, "method": method, "params": params }))?;
         line.push(b'\n');
+        if line.len() > MAX_REQUEST_LINE {
+            return Err(Error::RequestTooLarge {
+                size: line.len(),
+                limit: MAX_REQUEST_LINE,
+            });
+        }
         self.writer.write_all(&line)?;
         self.writer.flush()?;
         Ok(id)
     }
+}
+
+fn firmware_update_params(target: &FirmwareTarget, hex: &str, force: bool) -> Value {
+    let mut params = json!({ "hex": hex, "force": force });
+    match target {
+        FirmwareTarget::Device(device) => params["device"] = json!(device),
+        FirmwareTarget::Player(player) => params["player"] = json!(player),
+    }
+    params
 }
 
 /// The events of a `subscribe` connection; ends when the driver closes it.
@@ -191,8 +229,7 @@ fn decode_response<T: DeserializeOwned>(mut message: Map<String, Value>) -> Resu
 }
 
 fn decode_event(message: Map<String, Value>) -> Result<Event> {
-    let raw: RawEvent = serde_json::from_value(Value::Object(message))?;
-    raw.try_into()
+    Event::from_message(message)
 }
 
 #[cfg(unix)]
@@ -397,6 +434,88 @@ mod tests {
             Err(Error::Service(message)) => assert_eq!(message, "bad key \"a b\""),
             other => panic!("unexpected {other:?}"),
         }
+    }
+
+    #[test]
+    fn firmware_update_request() {
+        let (mut c, sink) = client(concat!(
+            "{\"id\":1,\"result\":{\"device\":\"/sys/devices/x/1-1.2\",\"started\":true}}\n",
+            "{\"id\":2,\"result\":{\"device\":\"/sys/devices/x/1-1.3\",\"started\":true}}\n",
+        ));
+        let hex = ":020000000C94\r\n:00000001FF\r\n";
+        let started = c
+            .firmware_update(
+                &FirmwareTarget::Device("/sys/devices/x/1-1.2".into()),
+                hex,
+                false,
+            )
+            .unwrap();
+        assert_eq!(
+            started,
+            FirmwareStarted {
+                device: "/sys/devices/x/1-1.2".into(),
+                started: true
+            }
+        );
+        c.firmware_update(&FirmwareTarget::Player(2), hex, true)
+            .unwrap();
+        assert_eq!(
+            sink.lines(),
+            vec![
+                json!({"id": 1, "method": "firmware_update",
+                       "params": {"device": "/sys/devices/x/1-1.2", "hex": hex, "force": false}}),
+                json!({"id": 2, "method": "firmware_update",
+                       "params": {"player": 2, "hex": hex, "force": true}}),
+            ]
+        );
+    }
+
+    #[test]
+    fn firmware_update_refused() {
+        let (mut c, _) = client(
+            "{\"id\":1,\"error\":\"the image is for 16c0:0f02 (Red) and the gun is 16c0:0f01 (Blue): refused without force\"}\n",
+        );
+        match c.firmware_update(&FirmwareTarget::Player(1), ":00000001FF\n", false) {
+            Err(Error::Service(message)) => assert!(message.contains("refused without force")),
+            other => panic!("unexpected {other:?}"),
+        }
+    }
+
+    #[test]
+    fn a_request_over_the_line_limit_is_not_sent() {
+        let (mut c, sink) = client("");
+        let hex = "0".repeat(MAX_REQUEST_LINE);
+        match c.firmware_update(&FirmwareTarget::Player(1), &hex, false) {
+            Err(Error::RequestTooLarge { size, limit }) => {
+                assert!(size > limit);
+                assert_eq!(limit, MAX_REQUEST_LINE);
+            }
+            other => panic!("unexpected {other:?}"),
+        }
+        assert_eq!(sink.lines().len(), 0, "nothing written");
+    }
+
+    #[test]
+    fn firmware_events_on_a_subscription() {
+        let (c, _) = client(concat!(
+            "{\"id\":1,\"result\":{\"guns\":[]}}\n",
+            "{\"event\":\"firmware\",\"device\":\"d\",\"phase\":\"bootloader\",\"progress\":0,\"error\":null}\n",
+            "{\"event\":\"firmware\",\"device\":\"d\",\"phase\":\"done\",\"progress\":100,\"error\":null}\n",
+        ));
+        let (_, events) = c.subscribe().unwrap();
+        let phases: Vec<_> = events
+            .map(|e| match e.unwrap() {
+                Event::Firmware(p) => (p.phase, p.progress),
+                other => panic!("unexpected {other:?}"),
+            })
+            .collect();
+        assert_eq!(
+            phases,
+            [
+                (crate::FirmwarePhase::Bootloader, 0),
+                (crate::FirmwarePhase::Done, 100)
+            ]
+        );
     }
 
     #[test]
