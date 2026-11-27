@@ -15,8 +15,9 @@ homepage: https://github.com/trois-six/sinden-ui
 license: MIT
 description: |-
   Tray application for the Sinden light gun driver.
-  Shows the guns' state and edits every setting of the sinden-driver
-  service (mode, handedness, buttons, recoil, camera, calibration).
+  Shows the guns' state, edits every setting of the sinden-driver
+  service (mode, handedness, buttons, recoil, camera, calibration) and
+  updates the guns' firmware from Sinden's firmware files.
 
 recommends:
   - sinden-driver

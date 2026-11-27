@@ -8,7 +8,7 @@ This repository builds two packages:
 | Package | What it contains | Required |
 |---|---|---|
 | `sinden-driver` | the driver binary, registered as a system service (systemd unit, Windows service, macOS LaunchAgent), its udev rule and default configuration | yes |
-| `sinden-driver-ui` | a tray application that shows the guns' state and edits every configuration key through the driver's control API | no |
+| `sinden-driver-ui` | a tray application that shows the guns' state, edits every configuration key and updates the guns' firmware through the driver's control API | no |
 
 The driver runs on its own: the UI is a convenience. Without it, the
 configuration is the file `LightgunMono.exe.config` (Sinden's format):
@@ -18,6 +18,34 @@ configuration is the file `LightgunMono.exe.config` (Sinden's format):
 | Linux | `/etc/sinden-driver/LightgunMono.exe.config` |
 | Windows | `%ProgramData%\SindenDriver\LightgunMono.exe.config` |
 | macOS | `~/Library/Application Support/SindenDriver/LightgunMono.exe.config` |
+
+## The tray application
+
+`sinden-driver-ui` (English and French) sits in the tray and talks to
+the driver's control API:
+
+* the tray menu lists each gun's state, and a firmware update running;
+* the settings window shows each gun (player, state, serial port,
+  firmware version), edits every key of the configuration (per player
+  and general), and turns its own start at login on and off;
+* **firmware update**: "Update firmware…" on a gun opens a file picker
+  for a firmware file (`.hex`). The file is checked (Intel HEX, its
+  checksums, at most 1 MiB) and the gun it is for is read from the USB
+  identifiers it presents (Blue `16c0:0f01`, Red `16c0:0f02`, Black or
+  shotgun player 1 `16c0:0f38`, Player 2 or shotgun player 2
+  `16c0:0f39`). A confirmation shows the file, the colour it is for and
+  the gun's own; a file of another colour needs "I know, write another
+  colour" ticked, and a file without Sinden identifiers (GunCon) is
+  refused. The update then shows its phase (bootloader, write, verify,
+  restart) and a progress bar, the new firmware version once the gun is
+  back, or the error and "Retry" (a failed update leaves the gun
+  recoverable: retry it). Saving the configuration waits for the end of
+  an update.
+
+**Firmware files are Sinden's** and are neither shipped nor downloaded
+by this application: take them from Sinden's official software
+(<https://sindenlightgun.com/drivers/>), whose folder holds the
+`LightgunFirmware*.hex` files of its version.
 
 ## Where the driver comes from
 

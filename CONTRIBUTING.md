@@ -36,6 +36,15 @@ cargo run -p sinden-control --example sinden-ctl -- status
 cd ui && npm run tauri dev
 ```
 
+The fake server simulates a firmware update too: the file is checked
+as the driver does (Intel HEX, its USB identifiers against the gun's:
+player 1 is Blue, player 2 Red), then the gun leaves the status, the
+`firmware` events go through their phases for about ten seconds and the
+gun comes back with firmware 2.1. With `SINDEN_FAKE_FIRMWARE_FAIL=1`
+the first update fails during its write, to try "Retry". Test files are
+easy to make (any Intel HEX holding the bytes `c0 16 01 0f` is "Blue"):
+never commit one of Sinden's.
+
 `SINDEN_DRIVER_SOCKET` overrides the endpoint (a socket path on Linux and
 macOS, a pipe name such as `\\.\pipe\sinden-driver-dev` on Windows).
 
