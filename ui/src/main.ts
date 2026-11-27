@@ -1,8 +1,18 @@
 // The settings window: guns' state, per-player settings, general settings.
 
 import * as backend from "./backend.ts";
-import type { ConfigSnapshot, ServiceStatus } from "./backend.ts";
+import type { ConfigSnapshot, FirmwareFile, FirmwareJob, Gun, IdInfo, ServiceStatus } from "./backend.ts";
 import { bgrToHex, Draft, effectiveValue, hexToBgr, isValid, type Player, playerKey } from "./config.ts";
+import {
+  canConfirm,
+  colourKey,
+  confirmation,
+  forceFor,
+  formatId,
+  isBusy,
+  jobView,
+  pickErrorMessage,
+} from "./firmware.ts";
 import { lang, type MsgKey, resolveLang, setLang, t } from "./i18n.ts";
 import {
   BUTTONS,
@@ -29,7 +39,17 @@ const state = {
   message: null as { kind: "ok" | "error"; text: string } | null,
   autostart: null as boolean | null,
   saving: false,
+  /** The firmware update sent to the driver, if any (kept by the Rust side). */
+  firmwareJob: null as FirmwareJob | null,
+  /** The confirmation dialog of a picked file. */
+  firmwareDialog: null as FirmwareDialog | null,
+  /** The file picker is open. */
+  picking: false,
+  /** Why the last file picked cannot be used. */
+  firmwareNotice: null as string | null,
 };
+
+type FirmwareDialog = { file: FirmwareFile; acknowledged: boolean; sending: boolean; error: string | null };
 
 // ---- Small DOM helper ----------------------------------------------------
 
@@ -108,6 +128,7 @@ function languagePicker(): HTMLElement {
         writePref("lang", state.langPref);
         applyLanguage();
         renderShell();
+        renderDialog();
       },
     },
     ...(["auto", "en", "fr"] as const).map((value) =>
@@ -149,6 +170,7 @@ function renderStatus(): void {
   );
   service.title = status.error ?? status.endpoint;
 
+  const busy = isBusy(state.firmwareJob);
   const cards = status.guns.map((gun) =>
     h(
       "div",
@@ -161,9 +183,253 @@ function renderStatus(): void {
         [gun.port, gun.firmware ? t("gun.firmware", { firmware: gun.firmware }) : ""].filter(Boolean).join(" · "),
       ),
       gun.error ? h("small", { class: "error" }, gun.error) : null,
+      h(
+        "button",
+        {
+          type: "button",
+          class: "small",
+          title: t("firmware.where"),
+          disabled: !status.connected || busy || state.picking || state.firmwareDialog !== null,
+          onclick: () => void pickFirmware(gun),
+        },
+        t("firmware.update"),
+      ),
     ),
   );
-  guns.replaceChildren(...(cards.length ? cards : [h("p", { class: "muted" }, status.connected ? t("guns.none") : "")]));
+  const nodes: HTMLElement[] = cards.length
+    ? cards
+    : [h("p", { class: "muted" }, status.connected ? t("guns.none") : "")];
+  if (cards.length || state.firmwareJob) nodes.push(h("p", { class: "muted note" }, t("firmware.where")));
+  if (state.firmwareNotice) nodes.push(h("p", { class: "message error note", role: "alert" }, state.firmwareNotice));
+  const panel = firmwarePanel();
+  if (panel) nodes.unshift(panel);
+  guns.replaceChildren(...nodes);
+}
+
+// ---- Firmware update -----------------------------------------------------
+
+function idLabel(id: IdInfo | null): string {
+  if (!id) return t("colour.unknown");
+  return `${t(colourKey(id.colour))} (${formatId(id)})`;
+}
+
+async function pickFirmware(gun: Gun): Promise<void> {
+  state.picking = true;
+  state.firmwareNotice = null;
+  renderStatus();
+  try {
+    const file = await backend.pickFirmware(gun.player);
+    if (file) {
+      state.firmwareDialog = { file, acknowledged: false, sending: false, error: null };
+      renderDialog();
+    }
+  } catch (err) {
+    const { key, params } = pickErrorMessage(err);
+    state.firmwareNotice = t(key, params);
+  } finally {
+    state.picking = false;
+    renderStatus();
+  }
+}
+
+function dialogElement(): HTMLDialogElement {
+  let dialog = document.getElementById("firmware-dialog") as HTMLDialogElement | null;
+  if (!dialog) {
+    dialog = h("dialog", { id: "firmware-dialog", class: "dialog" });
+    // Escape or the close button: forget the file picked.
+    dialog.addEventListener("close", () => {
+      if (state.firmwareDialog && !state.firmwareDialog.sending) {
+        state.firmwareDialog = null;
+        renderStatus();
+      }
+    });
+    dialog.addEventListener("cancel", (e) => {
+      if (state.firmwareDialog?.sending) e.preventDefault();
+    });
+    document.body.append(dialog);
+  }
+  return dialog;
+}
+
+function closeDialog(): void {
+  state.firmwareDialog = null;
+  const dialog = document.getElementById("firmware-dialog") as HTMLDialogElement | null;
+  if (dialog?.open) dialog.close();
+  renderStatus();
+}
+
+/** The confirmation of a picked file: what it is for, the warning, the colour check. */
+function renderDialog(): void {
+  const d = state.firmwareDialog;
+  const dialog = dialogElement();
+  if (!d) {
+    if (dialog.open) dialog.close();
+    return;
+  }
+  const { file } = d;
+  const c = confirmation(file);
+  const row = (label: string, value: string) =>
+    h("div", { class: "row" }, h("span", {}, label), h("strong", {}, value));
+  const body: HTMLElement[] = [
+    h("h2", {}, t("firmware.title", { player: file.gun.player })),
+    row(t("firmware.file"), file.fileName),
+  ];
+  if (c.kind === "refused") {
+    body.push(
+      h("p", { class: "banner down" }, t("firmware.noIds")),
+      h(
+        "div",
+        { class: "buttons-row" },
+        h("button", { type: "button", class: "primary", onclick: closeDialog }, t("firmware.close")),
+      ),
+    );
+  } else {
+    body.push(
+      row(t("firmware.fileFor"), file.ids.map(idLabel).join(", ")),
+      row(t("firmware.gun"), idLabel(file.gun.id)),
+      row(t("firmware.current"), file.gun.firmware || "?"),
+      h("p", { class: "banner warn" }, t("firmware.warning")),
+    );
+    if (c.sameGun === null) body.push(h("p", { class: "muted" }, t("firmware.unknownGun")));
+    if (c.needsForce) {
+      body.push(
+        h("p", { class: "banner down" }, t("firmware.mismatch")),
+        h(
+          "label",
+          { class: "check" },
+          h("input", {
+            type: "checkbox",
+            id: "firmware-force",
+            checked: d.acknowledged,
+            disabled: d.sending,
+            onchange: (e: Event) => {
+              d.acknowledged = (e.target as HTMLInputElement).checked;
+              renderDialog();
+            },
+          }),
+          t("firmware.force"),
+        ),
+      );
+    }
+    if (d.error) body.push(h("p", { class: "message error", role: "alert" }, d.error));
+    body.push(
+      h(
+        "div",
+        { class: "buttons-row" },
+        h("button", { type: "button", disabled: d.sending, onclick: closeDialog }, t("firmware.cancel")),
+        h(
+          "button",
+          {
+            type: "button",
+            class: "primary",
+            disabled: !canConfirm(c, d.acknowledged, d.sending) || isBusy(state.firmwareJob),
+            onclick: () => void confirmFirmware(),
+          },
+          t("firmware.confirm"),
+        ),
+      ),
+    );
+  }
+  dialog.replaceChildren(...body);
+  if (!dialog.open) dialog.showModal();
+}
+
+async function confirmFirmware(): Promise<void> {
+  const d = state.firmwareDialog;
+  if (!d) return;
+  const c = confirmation(d.file);
+  d.sending = true;
+  d.error = null;
+  renderDialog();
+  try {
+    state.firmwareJob = await backend.startFirmwareUpdate(d.file.id, forceFor(c, d.acknowledged));
+    d.sending = false;
+    closeDialog();
+    renderFooter();
+  } catch (err) {
+    d.sending = false;
+    d.error = t("firmware.refused", { error: String(err) });
+    renderDialog();
+  }
+}
+
+async function retryFirmware(): Promise<void> {
+  state.firmwareNotice = null;
+  try {
+    state.firmwareJob = await backend.retryFirmwareUpdate();
+  } catch (err) {
+    state.firmwareNotice = t("firmware.refused", { error: String(err) });
+  }
+  renderStatus();
+  renderFooter();
+}
+
+async function dismissFirmware(): Promise<void> {
+  await backend.dismissFirmwareUpdate().catch(() => {});
+  state.firmwareJob = null;
+  state.firmwareNotice = null;
+  renderStatus();
+  renderFooter();
+}
+
+/** The update's progress bar and phase; its result once over. */
+function firmwarePanel(): HTMLElement | null {
+  const job = state.firmwareJob;
+  if (!job) return null;
+  const view = jobView(job, state.status?.guns ?? []);
+  const nodes: (HTMLElement | string)[] = [
+    h("h2", {}, t("firmware.panel", { player: job.gun.player }), h("span", { class: "badge" }, job.fileName)),
+  ];
+  const bar = h("progress", { max: 100, value: view.progress, "aria-label": t("firmware.panel", { player: job.gun.player }) });
+  switch (view.stage) {
+    case "starting":
+    case "running":
+    case "waiting":
+      nodes.push(
+        h("div", { class: "progress-row" }, bar, h("span", {}, `${view.progress} %`)),
+        h("p", { role: "status" }, t(view.label)),
+        h("p", { class: "banner warn" }, t("firmware.warning")),
+      );
+      break;
+    case "done":
+      nodes.push(
+        h("div", { class: "progress-row" }, bar, h("span", {}, "100 %")),
+        h(
+          "p",
+          { class: "message ok", role: "status" },
+          t("firmware.done", { previous: view.previous || "?", firmware: view.firmware }),
+        ),
+        h(
+          "div",
+          { class: "buttons-row" },
+          h("button", { type: "button", onclick: () => void dismissFirmware() }, t("firmware.close")),
+        ),
+      );
+      break;
+    case "error":
+      nodes.push(
+        h("div", { class: "progress-row" }, bar, h("span", {}, `${view.progress} %`)),
+        h("p", { class: "message error", role: "alert" }, t("firmware.failed", { error: view.error })),
+        h(
+          "div",
+          { class: "buttons-row" },
+          h("button", { type: "button", onclick: () => void dismissFirmware() }, t("firmware.close")),
+          h(
+            "button",
+            { type: "button", class: "primary", disabled: !state.status?.connected, onclick: () => void retryFirmware() },
+            t("firmware.retry"),
+          ),
+        ),
+      );
+      break;
+  }
+  return h("section", { class: `card firmware stage-${view.stage}` }, ...nodes);
+}
+
+function onFirmware(job: FirmwareJob | null): void {
+  state.firmwareJob = job;
+  renderStatus();
+  renderFooter();
 }
 
 async function onStatus(status: ServiceStatus): Promise<void> {
@@ -455,14 +721,19 @@ function buttonCell(mode: ButtonMode, button: (typeof BUTTONS)[number], slot: Bu
 function renderFooter(): void {
   const footer = $("footer");
   const pending = state.draft.size;
+  // set_config restarts the guns: not during a firmware update.
+  const updating = isBusy(state.firmwareJob);
   const message = state.message
     ? h("span", { class: `message ${state.message.kind}`, role: "status" }, state.message.text)
     : state.invalid.size
       ? h("span", { class: "message error" }, t("actions.invalid"))
-      : pending
-        ? h("span", { class: "message" }, t("actions.pending", { count: pending }))
-        : h("span", {});
-  const canSave = pending > 0 && state.invalid.size === 0 && !state.saving && state.status?.connected === true;
+      : pending && updating
+        ? h("span", { class: "message" }, t("firmware.busy"))
+        : pending
+          ? h("span", { class: "message" }, t("actions.pending", { count: pending }))
+          : h("span", {});
+  const canSave =
+    pending > 0 && state.invalid.size === 0 && !state.saving && !updating && state.status?.connected === true;
   footer.replaceChildren(
     message,
     h("span", { class: "spacer" }),
@@ -502,6 +773,12 @@ async function start(): Promise<void> {
   applyLanguage();
   renderShell();
   await backend.onStatus((status) => void onStatus(status));
+  await backend.onFirmware(onFirmware);
+  // An update started before this window opened.
+  backend
+    .getFirmwareUpdate()
+    .then((job) => onFirmware(job))
+    .catch(() => {});
   backend
     .getAutostart()
     .then((enabled) => {

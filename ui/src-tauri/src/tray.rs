@@ -34,9 +34,10 @@ fn menu<R: Runtime>(
         None::<&str>,
     )?)?;
     menu.append(&PredefinedMenuItem::separator(app)?)?;
-    let lines: Vec<String> = if !status.connected {
+    let update = firmware_line(app, lang);
+    let mut lines: Vec<String> = if !status.connected {
         vec![i18n::text(lang, Text::Unreachable).to_owned()]
-    } else if status.guns.is_empty() {
+    } else if status.guns.is_empty() && update.is_none() {
         vec![i18n::text(lang, Text::NoGun).to_owned()]
     } else {
         status
@@ -45,6 +46,7 @@ fn menu<R: Runtime>(
             .map(|gun| i18n::gun_line(lang, gun))
             .collect()
     };
+    lines.extend(update);
     for (index, line) in lines.iter().enumerate() {
         menu.append(&MenuItem::with_id(
             app,
@@ -65,15 +67,26 @@ fn menu<R: Runtime>(
     Ok(menu)
 }
 
-fn tooltip(lang: Lang, status: &ServiceStatus) -> String {
+/// The line of a firmware update running or failed, if any.
+fn firmware_line<R: Runtime>(app: &AppHandle<R>, lang: Lang) -> Option<String> {
+    let job = app.state::<crate::AppState>().firmware.job()?;
+    i18n::firmware_line(lang, &job)
+}
+
+fn tooltip(lang: Lang, status: &ServiceStatus, update: Option<String>) -> String {
     let mut text = i18n::text(lang, Text::WindowTitle).to_owned();
     if !status.connected {
         text.push_str(" — ");
         text.push_str(i18n::text(lang, Text::Unreachable));
     }
-    for gun in &status.guns {
+    for line in status
+        .guns
+        .iter()
+        .map(|gun| i18n::gun_line(lang, gun))
+        .chain(update)
+    {
         text.push('\n');
-        text.push_str(&i18n::gun_line(lang, gun));
+        text.push_str(&line);
     }
     text
 }
@@ -84,7 +97,7 @@ pub fn create<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     let status = app.state::<crate::AppState>().monitor.status();
     let builder = TrayIconBuilder::with_id(TRAY_ID)
         .menu(&menu(app, lang, &status)?)
-        .tooltip(tooltip(lang, &status))
+        .tooltip(tooltip(lang, &status, firmware_line(app, lang)))
         // macOS shows the menu on a click; elsewhere a left click opens the
         // settings and a right click shows the menu.
         .show_menu_on_left_click(cfg!(target_os = "macos"))
@@ -134,5 +147,5 @@ pub fn update<R: Runtime>(app: &AppHandle<R>, status: &ServiceStatus) {
         }
         Err(err) => eprintln!("sinden-driver-ui: cannot update the tray menu: {err}"),
     }
-    let _ = tray.set_tooltip(Some(tooltip(lang, status)));
+    let _ = tray.set_tooltip(Some(tooltip(lang, status, firmware_line(app, lang))));
 }

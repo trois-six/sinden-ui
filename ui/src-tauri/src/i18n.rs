@@ -1,7 +1,9 @@
 //! The tray's strings in English and French (the window has its own, in
 //! ui/src/i18n.ts).
 
-use sinden_control::{Gun, GunState};
+use sinden_control::{FirmwarePhase, Gun, GunState};
+
+use crate::firmware::Job;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Lang {
@@ -33,6 +35,7 @@ pub enum Text {
     Quit,
     NoGun,
     Unreachable,
+    PickFirmware,
 }
 
 pub fn text(lang: Lang, text: Text) -> &'static str {
@@ -46,6 +49,8 @@ pub fn text(lang: Lang, text: Text) -> &'static str {
         (Lang::Fr, Text::NoGun) => "Aucun pistolet détecté",
         (Lang::En, Text::Unreachable) => "Driver not reachable",
         (Lang::Fr, Text::Unreachable) => "Pilote injoignable",
+        (Lang::En, Text::PickFirmware) => "Firmware file (Intel HEX)",
+        (Lang::Fr, Text::PickFirmware) => "Fichier de firmware (Intel HEX)",
     }
 }
 
@@ -87,6 +92,30 @@ pub fn gun_line(lang: Lang, gun: &Gun) -> String {
         line.push_str(error);
     }
     line
+}
+
+/// A firmware update's line in the tray menu while it runs or after it
+/// failed, e.g. `Player 1: updating the firmware (45 %)`.
+pub fn firmware_line(lang: Lang, job: &Job) -> Option<String> {
+    let player = job.gun.player;
+    let phase = job.progress.as_ref().map(|p| (p.phase, p.progress));
+    Some(match (lang, phase) {
+        (_, Some((FirmwarePhase::Done, _))) => return None,
+        (Lang::En, Some((FirmwarePhase::Error, _))) => {
+            format!("Player {player}: firmware update failed")
+        }
+        (Lang::Fr, Some((FirmwarePhase::Error, _))) => {
+            format!("Joueur {player} : échec de la mise à jour du firmware")
+        }
+        (Lang::En, progress) => format!(
+            "Player {player}: updating the firmware ({} %)",
+            progress.map_or(0, |(_, p)| p)
+        ),
+        (Lang::Fr, progress) => format!(
+            "Joueur {player} : mise à jour du firmware ({} %)",
+            progress.map_or(0, |(_, p)| p)
+        ),
+    })
 }
 
 #[cfg(test)]

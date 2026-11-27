@@ -7,7 +7,7 @@ use std::thread;
 use std::time::Duration;
 
 use serde::Serialize;
-use sinden_control::{API_VERSION, Client, Endpoint, Error, Gun, Guns};
+use sinden_control::{API_VERSION, Client, Endpoint, Error, Event, Gun, Guns};
 use tauri::{AppHandle, Emitter, Manager, Runtime};
 
 /// The event the settings window listens to.
@@ -87,6 +87,12 @@ pub fn spawn<R: Runtime>(app: AppHandle<R>) {
         .spawn(move || {
             loop {
                 let error = session(&app).err();
+                crate::firmware::connection_lost(
+                    &app,
+                    &error
+                        .as_ref()
+                        .map_or_else(|| Error::Closed.to_string(), ToString::to_string),
+                );
                 let endpoint = app.state::<crate::AppState>().monitor.endpoint().clone();
                 publish(
                     &app,
@@ -119,6 +125,9 @@ fn session<R: Runtime>(app: &AppHandle<R>) -> Result<(), Error> {
     publish(app, &status(&guns));
     loop {
         let event = events.next_event()?;
+        if let Event::Firmware(progress) = &event {
+            crate::firmware::on_progress(app, progress);
+        }
         if guns.apply(&event) {
             publish(app, &status(&guns));
         }

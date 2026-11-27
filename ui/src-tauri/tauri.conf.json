@@ -22,7 +22,7 @@
     "targets": ["app"],
     "category": "Utility",
     "shortDescription": "Settings and status of the Sinden light gun driver",
-    "longDescription": "A tray application that shows the state of the Sinden light guns and edits the sinden-driver service's configuration.",
+    "longDescription": "A tray application that shows the state of the Sinden light guns and edits the sinden-driver service's configuration and updates the guns' firmware.",
     "copyright": "Copyright (c) 2026 trois-six",
     "license": "MIT",
     "icon": [

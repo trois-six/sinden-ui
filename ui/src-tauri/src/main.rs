@@ -2,13 +2,15 @@
 //!
 //! It starts in the tray (no window when started with `--tray`, as at
 //! login), shows the guns' state from the driver's control API and opens a
-//! settings window that edits the driver's configuration.
+//! settings window that edits the driver's configuration and updates the
+//! guns' firmware.
 
 // No console window on Windows in release builds.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod cli;
 mod commands;
+mod firmware;
 mod i18n;
 mod monitor;
 mod tray;
@@ -30,6 +32,7 @@ pub const TRAY_ARG: &str = "--tray";
 pub struct AppState {
     pub monitor: Monitor,
     pub lang: Mutex<i18n::Lang>,
+    pub firmware: firmware::Firmware,
 }
 
 fn main() {
@@ -49,6 +52,8 @@ fn main() {
             MacosLauncher::LaunchAgent,
             Some(vec![TRAY_ARG]),
         ))
+        // The firmware file picker, used from Rust only (no JS permission).
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             commands::get_status,
             commands::get_config,
@@ -56,6 +61,11 @@ fn main() {
             commands::get_autostart,
             commands::set_autostart,
             commands::set_language,
+            firmware::pick_firmware,
+            firmware::start_firmware_update,
+            firmware::retry_firmware_update,
+            firmware::dismiss_firmware_update,
+            firmware::get_firmware_update,
         ])
         .setup(move |app| {
             // `--autostart=on|off` (used by the installers): set it and quit.
@@ -74,6 +84,7 @@ fn main() {
             app.manage(AppState {
                 monitor: Monitor::default(),
                 lang: Mutex::new(lang),
+                firmware: firmware::Firmware::default(),
             });
             tray::create(app.handle())?;
             monitor::spawn(app.handle().clone());

@@ -48,6 +48,28 @@ body { margin: 0; background: var(--bg); color: var(--text); }
 .gun.state-starting, .gun.state-aimed_away, .gun.state-calibrating { border-left-color: var(--warn); }
 .gun.state-stopped { border-left-color: var(--down); }
 .gun small { color: var(--muted); }
+.gun button.small { align-self: flex-start; margin-top: 6px; padding: 3px 10px; font-size: 12px; }
+.guns .note { flex-basis: 100%; margin: 0; font-size: 12px; }
+
+.card.firmware { flex-basis: 100%; display: grid; gap: 8px; border-left: 4px solid var(--warn); }
+.card.firmware.stage-done { border-left-color: var(--ok); }
+.card.firmware.stage-error { border-left-color: var(--down); }
+.card.firmware p { margin: 0; }
+.card.firmware .banner { margin: 0; }
+.progress-row { display: flex; align-items: center; gap: 10px; }
+.progress-row progress { flex: 1; height: 12px; accent-color: var(--accent); }
+.progress-row span { min-width: 44px; text-align: right; font-variant-numeric: tabular-nums; }
+.buttons-row { display: flex; justify-content: flex-end; gap: 10px; }
+
+.dialog { width: min(560px, calc(100vw - 32px)); border: 1px solid var(--line); border-radius: 10px; padding: 16px 20px; background: var(--card); color: var(--text); display: grid; gap: 10px; }
+.dialog:not([open]) { display: none; }
+.dialog::backdrop { background: rgb(0 0 0 / 0.45); }
+.dialog h2 { font-size: 15px; margin: 0 0 4px; }
+.dialog .row strong { overflow-wrap: anywhere; font-weight: 500; }
+.dialog .banner { margin: 0; }
+.dialog p { margin: 0; }
+.check { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.check input { width: 18px; height: 18px; accent-color: var(--accent); }
 
 .tabs { display: flex; gap: 4px; padding: 12px 20px 0; border-bottom: 1px solid var(--line); }
 .tabs button { border: 0; background: none; color: var(--muted); padding: 8px 14px; border-bottom: 2px solid transparent; font: inherit; cursor: pointer; }
